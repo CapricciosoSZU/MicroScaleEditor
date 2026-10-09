@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "not_real_SEM_TEM_validation": true,
+  "50nm_bar": {
+    "file": "SYNTHETIC_50nm_250px.png",
+    "edges": [
+      [
+        700,
+        970
+      ],
+      [
+        950,
+        970
+      ]
+    ],
+    "length_nm": 50,
+    "sx_nm_per_px": 0.2
+  },
+  "paired": {
+    "reference": "SYNTHETIC_reference_0.5nm.png",
+    "work": "SYNTHETIC_work_2x.png",
+    "r": 2,
+    "reference_sx": 0.5,
+    "work_sx": 0.25
+  }
+}

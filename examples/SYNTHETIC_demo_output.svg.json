@@ -1,0 +1,159 @@
+{
+  "software": "MicroScale Editor",
+  "unit": "nm",
+  "status": "Confirmed",
+  "sx": 0.2,
+  "sy": 0.2,
+  "k": 1.0,
+  "source_hash": "d1ab7ea2271ced66d0b5455e7b03c4409f8fd395b5fb4e5dc6a4cab3c5370ac3",
+  "source_dtype": "uint8",
+  "display_low": 0.0,
+  "display_high": 255.0,
+  "scale_length_px": 25.0,
+  "scale_length_nm": 5,
+  "warnings": [],
+  "recipe": {
+    "schema_version": 1,
+    "software_version": "0.1.0",
+    "document_id": "ad505c6e-75bb-4050-b1b8-cb8d759ab097",
+    "source_path": "SYNTHETIC_clean.png",
+    "source_hash": "d1ab7ea2271ced66d0b5455e7b03c4409f8fd395b5fb4e5dc6a4cab3c5370ac3",
+    "source_shape": [
+      1024,
+      1024,
+      4
+    ],
+    "source_dtype": "uint8",
+    "calibration": {
+      "sx": 0.2,
+      "sy": 0.2,
+      "status": "Confirmed",
+      "source": "Synthetic example manifest; not measured microscopy",
+      "square_pixels": true,
+      "evidence": [
+        {
+          "sx": 0.2,
+          "sy": 0.2,
+          "source": "Synthetic example manifest; not measured microscopy",
+          "details": {}
+        }
+      ],
+      "conflict_threshold": 0.02,
+      "endpoints": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          250.0,
+          0.0
+        ]
+      ],
+      "length_nm": 50.0,
+      "rule": "Solid bar: outer half-open edges. End ticks: center-to-center. Antialiasing: 50% local contrast."
+    },
+    "crop": {
+      "kind": "rectangle",
+      "rect": [
+        0.0,
+        0.0,
+        1024.0,
+        1024.0
+      ],
+      "points": [],
+      "ratio": "Free",
+      "background": "transparent"
+    },
+    "style": {
+      "enabled": true,
+      "length_nm": 5,
+      "color": "#ffffff",
+      "thickness": 5.0,
+      "endcaps": false,
+      "font": "Arial",
+      "font_size": 26,
+      "bold": true,
+      "text_position": "above",
+      "gap": 6.0,
+      "plate": true,
+      "plate_color": "#000000",
+      "plate_opacity": 0.8,
+      "anchor": "bottom-right",
+      "margin": 20.0,
+      "x": 20.0,
+      "y": 20.0
+    },
+    "output": {
+      "mode": "native",
+      "scale": 1.0,
+      "width_px": 1024,
+      "width_mm": 85.0,
+      "dpi": 300.0,
+      "font_pt": 9.0,
+      "line_pt": 1.0,
+      "label": "(a) SYNTHETIC",
+      "label_x": 16.0,
+      "label_y": 48,
+      "export_guides": false
+    },
+    "inset": {
+      "enabled": true,
+      "roi": {
+        "kind": "rectangle",
+        "rect": [
+          420.0,
+          350.0,
+          80.0,
+          80.0
+        ],
+        "points": [],
+        "ratio": "Free",
+        "background": "transparent"
+      },
+      "x": 32.0,
+      "y": 90.0,
+      "width": 320.0,
+      "circular": false,
+      "border_color": "#ffd166",
+      "style": {
+        "enabled": true,
+        "length_nm": 5,
+        "color": "#ffffff",
+        "thickness": 3.0,
+        "endcaps": false,
+        "font": "Arial",
+        "font_size": 20,
+        "bold": true,
+        "text_position": "above",
+        "gap": 6.0,
+        "plate": true,
+        "plate_color": "#000000",
+        "plate_opacity": 0.8,
+        "anchor": "bottom-right",
+        "margin": 12.0,
+        "x": 20.0,
+        "y": 20.0
+      }
+    },
+    "reference": {},
+    "masks": [],
+    "mask_morph": {
+      "line": 0,
+      "text": 0,
+      "background": 0
+    },
+    "candidates": [],
+    "treatment": "keep",
+    "treatment_color": "#000000",
+    "pure_color_confirmed": false,
+    "protected": [],
+    "measurements": [],
+    "display_low": 0.0,
+    "display_high": 255.0,
+    "notes": "Explicitly synthetic demonstration. Inset is a digital 4x crop, not an independent micrograph. 5 nm: main 25 px; inset 100 px."
+  },
+  "role": "presentation",
+  "outputs": [
+    "SYNTHETIC_demo_output.svg"
+  ]
+}

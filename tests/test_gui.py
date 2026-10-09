@@ -1,0 +1,363 @@
+"""Runs real Qt widgets, mouse/keyboard events, workers, clipboard and files."""
+from copy import deepcopy
+import time
+from pathlib import Path
+
+import numpy as np
+import pytest
+from PySide6.QtCore import QPointF, Qt, QSettings
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
+
+from microscale.gui import MainWindow, ReferenceDialog
+from microscale.image_io import read_source, qimage_to_array
+from microscale.model import load_project
+from microscale.rendering import compose, render_image
+
+
+def wait_until(predicate, timeout=45000):
+    deadline = time.monotonic() + timeout / 1000
+    while not predicate():
+        QApplication.processEvents()
+        # Let Python worker threads run: QTest.qWait may retain the GIL on Windows.
+        time.sleep(.01)
+        if time.monotonic() > deadline:
+            raise AssertionError("GUI condition timed out")
+
+
+def settled(window):
+    wait_until(lambda: not window.jobs and not window.render_busy and not window.render_timer.isActive())
+
+
+@pytest.fixture
+def window(qapp, tmp_path):
+    widget = MainWindow()
+    widget.settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    widget.recovery_dir = tmp_path / "recovery"
+    widget.show()
+    QTest.qWait(100)
+    yield widget
+    settled(widget)
+    widget.close()
+    QApplication.processEvents()
+
+
+def drag(canvas, start, end):
+    a, b = canvas.mapFromScene(QPointF(*start)), canvas.mapFromScene(QPointF(*end))
+    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, pos=a)
+    for step in range(1, 6):
+        point = a + (b - a) * (step / 5)
+        QTest.mouseMove(canvas.viewport(), point, delay=15)
+    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, pos=b)
+
+
+def click(canvas, point, modifier=Qt.KeyboardModifier.NoModifier):
+    QTest.mouseClick(canvas.viewport(), Qt.MouseButton.LeftButton, modifier, canvas.mapFromScene(QPointF(*point)))
+
+
+def open_clean(window, examples):
+    window.load_image(examples / "SYNTHETIC_clean.png")
+    wait_until(lambda: window.document is not None)
+    settled(window)
+    assert window.composition is not None
+
+
+def calibrate_manual(window):
+    window.sx.setText("0.2")
+    window.square.setChecked(True)
+    window.manual_calibration()
+    window.confirm_calibration()
+    settled(window)
+
+
+def test_gui_workflow_a_mouse_crops_history_measure_and_protect(window, examples, tmp_path):
+    open_clean(window, examples)
+    assert window.document.project.calibration.status == "Uncalibrated"
+    calibrate_manual(window)
+    window.crop_kind.setCurrentText("rectangle")
+    window.ratio.setCurrentText("4:3")
+    window.draw_crop()
+    drag(window.canvas, [100, 100], [700, 500])
+    settled(window)
+    rect = window.document.project.crop.rect
+    assert rect[2] / rect[3] == pytest.approx(4 / 3, abs=.01)
+    window.tool.setCurrentText("Edit crop")
+    old = deepcopy(window.document.project.crop.rect)
+    drag(window.canvas, [350, 300], [390, 340])
+    settled(window)
+    assert window.document.project.crop.rect[0] == pytest.approx(old[0] + 40, abs=3)
+    window.canvas.setFocus()
+    window.undo(-1)
+    settled(window)
+    assert window.document.project.crop.rect == old
+    window.undo(1)
+    settled(window)
+    for shape in ("square", "circle", "ellipse"):
+        window.crop_kind.setCurrentText(shape)
+        window.ratio.setCurrentText("Free")
+        window.draw_crop()
+        drag(window.canvas, [150, 150], [700, 550])
+        settled(window)
+        p = window.document.project
+        assert p.crop.kind == shape
+        if shape in ("square", "circle"):
+            assert p.crop.rect[2] == pytest.approx(p.crop.rect[3])
+    window.crop_kind.setCurrentText("polygon")
+    window.draw_crop()
+    for point in ([100, 100], [700, 130], [650, 700], [120, 630]):
+        click(window.canvas, point)
+    QTest.keyClick(window.canvas, Qt.Key.Key_Return)
+    settled(window)
+    assert len(window.document.project.crop.points) == 4
+    window.tool.setCurrentText("Edit crop")
+    drag(window.canvas, [100, 100], [150, 160])
+    settled(window)
+    assert window.document.project.crop.points[0] == pytest.approx([150, 160], abs=3)
+    click(window.canvas, [400, 150], Qt.KeyboardModifier.ControlModifier)
+    settled(window)
+    assert len(window.document.project.crop.points) == 5
+    QTest.keyClick(window.canvas, Qt.Key.Key_Delete)
+    settled(window)
+    assert len(window.document.project.crop.points) == 4
+    window.tool.setCurrentText("Measure horizontal")
+    drag(window.canvas, [200, 220], [400, 280])
+    settled(window)
+    measure = window.document.project.measurements[-1]
+    assert measure["points"][0][1] == measure["points"][1][1]
+    window.tool.setCurrentText("Protect polygon")
+    for point in ([200, 200], [300, 200], [300, 300]):
+        click(window.canvas, point)
+    QTest.keyClick(window.canvas, Qt.Key.Key_Return)
+    settled(window)
+    assert window.document.project.protected
+    window.save_to(str(tmp_path / "GUI project.json"))
+    settled(window)
+    saved = load_project(tmp_path / "GUI project.json")
+    assert saved.crop == window.document.project.crop
+    window.open_project_path(str(tmp_path / "GUI project.json"))
+    wait_until(lambda: len(window.documents) == 2)
+    settled(window)
+    assert window.document.project.protected == saved.protected
+    assert window.document.project.measurements == saved.measurements
+
+
+def test_gui_workflow_b_ocr_masks_endpoints_export(window, examples, tmp_path):
+    window.load_image(examples / "SYNTHETIC_50nm_250px.png")
+    wait_until(lambda: window.document is not None)
+    settled(window)
+    window.detect_source()
+    settled(window)
+    candidates = window.document.project.candidates
+    index = next(i for i, c in enumerate(candidates) if c.get("length_nm") == 50 and abs(c["line_rect"][2] - 250) < 3)
+    window.candidate_list.setCurrentRow(index)
+    window.square.setChecked(True)
+    window.use_candidate()
+    settled(window)
+    assert window.document.project.masks
+    assert window.document.project.calibration.status == "Pending"
+    window.endpoint_calibration()
+    window.confirm_calibration()
+    settled(window)
+    assert window.document.project.calibration.sx == pytest.approx(.2)
+    window.tool.setCurrentText("Mask brush")
+    window.canvas.fit()
+    drag(window.canvas, [650, 910], [680, 910])
+    settled(window)
+    assert window.document.project.masks[-1]["kind"] == "brush"
+    window.tool.setCurrentText("Mask erase")
+    click(window.canvas, [660, 910])
+    settled(window)
+    assert window.document.project.masks[-1]["erase"]
+    window.treatment.setCurrentText("plate")
+    window.apply_treatment()
+    window.scale_form.enabled.setChecked(True)
+    window.scale_form.length.setText("5 nm")
+    window.apply_style()
+    settled(window)
+    assert window.composition.scale_length_px == pytest.approx(25)
+    window.start_export(str(tmp_path / "final.png"))
+    settled(window)
+    assert (tmp_path / "final.png").exists()
+    window.clipboard()
+    settled(window)
+    clipboard = QApplication.clipboard().image()
+    assert clipboard.width() == 1024
+    np.testing.assert_array_equal(qimage_to_array(clipboard), qimage_to_array(window.result_image))
+
+
+def test_gui_workflow_c_pairing_overlay_and_inset(window, examples):
+    window.load_image(examples / "SYNTHETIC_work_2x.png")
+    wait_until(lambda: window.document is not None)
+    settled(window)
+    ref = read_source(examples / "SYNTHETIC_reference_footer.png")
+    dialog = ReferenceDialog(window, ref, window.document)
+    dialog.show()
+    QTest.qWait(100)
+    dialog.auto_register()
+    wait_until(lambda: dialog.registration is not None, 30000)
+    settled(window)
+    assert dialog.registration["r"] == pytest.approx(2, rel=.001)
+    assert not dialog.overlap.image_item.pixmap().isNull()
+    dialog.reference_sx.setText("0.5")
+    dialog.square.setChecked(True)
+    dialog.transfer_calibration()
+    result = dialog.result_data
+    p = window.document.project
+    p.reference = result
+    p.calibration.propose(result["sx_reference"] / result["r"], result["sx_reference"] / result["r"], "GUI paired synthetic", True, result)
+    window.commit()
+    window.confirm_calibration()
+    settled(window)
+    assert p.calibration.sx == pytest.approx(.25, rel=.001)
+    window.draw_inset()
+    drag(window.canvas, [400, 400], [600, 600])
+    settled(window)
+    roi = deepcopy(p.inset.roi)
+    assert p.inset.enabled
+    window.tool.setCurrentText("Move inset")
+    window.canvas.fit()
+    drag(window.canvas, [100, 100], [170, 170])
+    settled(window)
+    assert p.inset.roi == roi
+    assert p.inset.x > 50
+    window.inset_roi_fields[0].setValue(500)
+    window.apply_inset()
+    settled(window)
+    assert p.inset.roi.rect[0] == 500
+    assert p.reference["verified"]
+
+
+def test_view_zoom_before_diff_clipboard_and_scale_drag(window, examples, tmp_path):
+    open_clean(window, examples)
+    calibrate_manual(window)
+    window.scale_form.enabled.setChecked(True)
+    window.apply_style()
+    settled(window)
+    expected = qimage_to_array(window.result_image)
+    for factor in (.5, 1., 2.):
+        window.canvas.resetTransform()
+        window.canvas.scale(factor, factor)
+        window.start_export(str(tmp_path / f"zoom-{factor}.png"))
+        settled(window)
+        np.testing.assert_array_equal(read_source(tmp_path / f"zoom-{factor}.png").pixels, expected)
+    window.canvas.fit()
+    window.tool.setCurrentText("Move scale")
+    before_length = window.composition.scale_length_px
+    rect = window.composition.scale_rect
+    drag(window.canvas, [rect[0] + 5, rect[1] + 5], [rect[0] - 35, rect[1] - 35])
+    settled(window)
+    assert window.document.project.style.anchor == "custom"
+    assert window.composition.scale_length_px == before_length
+    old_x = window.document.project.style.x
+    QTest.keyClick(window.canvas, Qt.Key.Key_Left)
+    settled(window)
+    assert window.document.project.style.x == old_x - 1
+    QTest.keyPress(window.canvas, Qt.Key.Key_B)
+    assert window.before
+    np.testing.assert_array_equal(qimage_to_array(window.output_view.image_item.pixmap().toImage()), qimage_to_array(window.original_image))
+    QTest.keyRelease(window.canvas, Qt.Key.Key_B)
+    assert not window.before
+    window.difference.setChecked(True)
+    assert window.diff_image is not None
+    window.difference.setChecked(False)
+    window.preview_actual()
+    assert window.output_view.transform().m11() * window.output_view.viewport().devicePixelRatioF() == pytest.approx(1)
+    screenshot_folder = Path(__file__).resolve().parent.parent / "test-output"
+    screenshot_folder.mkdir(exist_ok=True)
+    window.grab().save(str(screenshot_folder / "gui-output-preview.png"))
+    window.view_tabs.setCurrentIndex(0)
+    window.canvas.fit()
+    window.grab().save(str(screenshot_folder / "gui-editor.png"))
+
+
+def test_late_detection_not_applied_to_new_image(window, examples):
+    open_clean(window, examples)
+    original = window.document
+    window.detect_source()
+    window.add_source(read_source(examples / "SYNTHETIC_different_field.png"))
+    settled(window)
+    assert window.document is not original
+    assert window.document.project.candidates == []
+
+
+def test_freehand_mask_polygon_resize_and_endpoint_drag(window, examples):
+    open_clean(window, examples)
+    window.tool.setCurrentText("Crop freehand")
+    canvas = window.canvas
+    points = [[130, 130], [300, 110], [540, 150], [550, 450], [300, 500], [140, 400], [130, 130]]
+    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, pos=canvas.mapFromScene(QPointF(*points[0])))
+    for point in points[1:]:
+        QTest.mouseMove(canvas.viewport(), canvas.mapFromScene(QPointF(*point)), delay=20)
+    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, pos=canvas.mapFromScene(QPointF(*points[-1])))
+    settled(window)
+    assert window.document.project.crop.kind == "freehand"
+    window.tool.setCurrentText("Mask polygon")
+    for point in [[200, 200], [240, 200], [250, 250], [200, 250]]:
+        click(canvas, point)
+    QTest.keyClick(canvas, Qt.Key.Key_Return)
+    settled(window)
+    assert window.document.project.masks[-1]["kind"] == "polygon"
+    window.crop_kind.setCurrentText("rectangle")
+    window.ratio.setCurrentText("16:9")
+    window.draw_crop()
+    drag(canvas, [700, 700], [1023, 1023])
+    settled(window)
+    p = window.document.project
+    assert p.crop.rect[2] / p.crop.rect[3] == pytest.approx(16 / 9)
+    assert p.crop.rect[0] + p.crop.rect[2] <= 1024
+    assert p.crop.rect[1] + p.crop.rect[3] <= 1024
+    window.tool.setCurrentText("Edit crop")
+    x, y, w, h = p.crop.rect
+    drag(canvas, [x + w, y + h], [x + w - 60, y + h - 40])
+    settled(window)
+    assert p.crop.rect[2] < w
+    assert p.crop.rect[2] / p.crop.rect[3] == pytest.approx(16 / 9)
+    window.tool.setCurrentText("Endpoints")
+    drag(canvas, [200, 300], [450, 300])
+    settled(window)
+    assert np.linalg.norm(np.array(p.calibration.endpoints[1]) - p.calibration.endpoints[0]) == pytest.approx(250, abs=3)
+    window.square.setChecked(True)
+    window.known_length.setText("50 nm")
+    window.endpoint_calibration()
+    window.confirm_calibration()
+    settled(window)
+    assert p.calibration.sx == pytest.approx(.2, abs=.005)
+
+
+def test_reference_manual_corresponding_mouse_points(window, examples):
+    open_clean(window, examples)
+    reference = read_source(examples / "SYNTHETIC_reference_0.5nm.png")
+    dialog = ReferenceDialog(window, reference, window.document)
+    dialog.show()
+    QTest.qWait(80)
+    for point in [[150, 150], [750, 200], [300, 700], [750, 750]]:
+        click(dialog.ref_view, point, Qt.KeyboardModifier.ControlModifier)
+        click(dialog.work_view, point, Qt.KeyboardModifier.ControlModifier)
+    dialog.manual_register()
+    wait_until(lambda: dialog.registration is not None)
+    assert dialog.registration["r"] == pytest.approx(1, abs=.004)
+    assert dialog.registration["inliers"] == 4
+    dialog.flicker.setChecked(True)
+    dialog.flicker_tick()
+    assert dialog.flicker_state
+    dialog.reject()
+
+
+def test_display_reset_and_solid_mask_confirmation(window, examples):
+    open_clean(window, examples)
+    original = window.document.rgba.copy()
+    window.display_low.setValue(50)
+    window.display_high.setValue(200)
+    window.apply_display()
+    settled(window)
+    assert not np.array_equal(original, window.document.rgba)
+    window.reset()
+    settled(window)
+    np.testing.assert_array_equal(window.document.rgba, original)
+    window.pure_confirmed.setChecked(True)
+    window.treatment.setCurrentText("solid")
+    window.apply_treatment()
+    window.canvas_edit("mask", {"layer": "line", "kind": "rect", "rect": [10, 10, 20, 10]})
+    settled(window)
+    assert window.document.project.treatment == "keep"
+    assert not window.document.project.pure_color_confirmed

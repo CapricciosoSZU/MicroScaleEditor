@@ -1,0 +1,58 @@
+# Windows packaging
+
+`dist/MicroScaleEditor.exe` is a single-file Windows x64 program containing Python, Qt, OpenCV, tifffile, and RapidOCR/ONNX CPU models. It runs without this repository, a virtual environment, a separate Python installation, or model downloads.
+
+The portable ZIP also includes English documentation and third-party license notices. Retain those notices when redistributing.
+
+## Runtime data
+
+Double-click the EXE. **File → Synthetic examples** generates explicitly synthetic inputs. Startup extracts bundled libraries to a temporary directory; disk speed and antivirus scanning affect startup time. Normal exit cleans up extraction files.
+
+Persistent data lives under `%LOCALAPPDATA%\MicroScaleEditor`:
+
+| Path | Purpose |
+|---|---|
+| `examples` | Generated synthetic source images |
+| `logs\microscale.log` | Rotating application log |
+| `recovery` | Autosaved projects and backups |
+| `startup-error.log` | Unexpected startup failures, if any |
+
+The portable application installs no service and has no automatic updater. It is not code-signed.
+
+## Rebuilding
+
+Use a Windows x64 Python environment:
+
+```powershell
+.\setup.ps1 -OCR
+.\build_exe.ps1 -InstallBuildTools
+# Later builds
+.\build_exe.ps1
+```
+
+Validated build: Python 3.13.5, PyInstaller 6.12.0, hooks-contrib 2025.1. Runtime and build requirements are separate. The spec collects OCR models, dynamically imported detector modules, and required DLLs. Conda-backed virtual environments need explicit decimal/ctypes DLL collection when those libraries exist.
+
+For an offline base Anaconda installation that already has the required build tools, `scripts/bootstrap_build_tools.py` copies only the listed build distributions into the virtual environment. It changes neither the base installation nor runtime packages. Normal builds should install `requirements-build.txt`.
+
+## Verify the binary
+
+```powershell
+# Copies the EXE to a Unicode path and strips Python/Conda environment variables
+.\.venv\Scripts\python.exe scripts\verify_exe.py
+# Direct diagnostic invocation; opens a real Qt window
+Start-Process -FilePath '.\dist\MicroScaleEditor.exe' -ArgumentList '--self-test', 'C:\checks\microscale' -Wait
+# Replay a saved project
+Start-Process -FilePath '.\dist\MicroScaleEditor.exe' -ArgumentList '--recipe', 'C:\data\project.json', '--output', 'C:\data\result.png' -Wait
+```
+
+The diagnostic folder contains `self-test.json`, a screenshot, and exports. Success requires `status: passed` and `frozen: true`. It checks actual local OCR, 25 px bar geometry, PNG/SVG, clipboard, mask save/load, recovery, input hashes, and exact 16-bit TIFF cropping.
+
+`MICROSCALE_USER_DIR` isolates persistent data for diagnostics. It is unnecessary for normal use. This verifies a restricted process environment on the build machine; another physical computer or clean Windows VM remains untested.
+
+## Release contents
+
+- `MicroScaleEditor.exe`: standalone application.
+- `MicroScaleEditor-v0.1.0-Windows-x64.zip`: the same application, documentation, and third-party notices.
+- `SHA256SUMS.txt`: checksums for both downloads.
+
+The repository excludes virtual environments, builds, binaries, logs, temporary checks, and recovery files. Executables are published in GitHub Releases.

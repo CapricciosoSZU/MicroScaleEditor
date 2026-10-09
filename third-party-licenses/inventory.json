@@ -1,0 +1,249 @@
+[
+  {
+    "name": "PySide6",
+    "version": "6.9.3",
+    "home_page": null,
+    "project_urls": [
+      "Homepage, https://pyside.org",
+      "Documentation, https://doc.qt.io/qtforpython",
+      "Repository, https://code.qt.io/cgit/pyside/pyside-setup.git/",
+      "Changelog, https://code.qt.io/cgit/pyside/pyside-setup.git/tree/doc/changelogs",
+      "Tracker, https://bugreports.qt.io/projects/PYSIDE"
+    ],
+    "license_expression": null,
+    "notices": [
+      "PySide6/pyside6-6.9.3.dist-info/licenses/LicenseRef-Qt-Commercial.txt"
+    ]
+  },
+  {
+    "name": "PySide6_Essentials",
+    "version": "6.9.3",
+    "home_page": null,
+    "project_urls": [
+      "Homepage, https://pyside.org",
+      "Documentation, https://doc.qt.io/qtforpython",
+      "Repository, https://code.qt.io/cgit/pyside/pyside-setup.git/",
+      "Changelog, https://code.qt.io/cgit/pyside/pyside-setup.git/tree/doc/changelogs",
+      "Tracker, https://bugreports.qt.io/projects/PYSIDE"
+    ],
+    "license_expression": null,
+    "notices": [
+      "PySide6_Essentials/pyside6_essentials-6.9.3.dist-info/licenses/LicenseRef-Qt-Commercial.txt"
+    ]
+  },
+  {
+    "name": "PySide6_Addons",
+    "version": "6.9.3",
+    "home_page": null,
+    "project_urls": [
+      "Homepage, https://pyside.org",
+      "Documentation, https://doc.qt.io/qtforpython",
+      "Repository, https://code.qt.io/cgit/pyside/pyside-setup.git/",
+      "Changelog, https://code.qt.io/cgit/pyside/pyside-setup.git/tree/doc/changelogs",
+      "Tracker, https://bugreports.qt.io/projects/PYSIDE"
+    ],
+    "license_expression": null,
+    "notices": [
+      "PySide6_Addons/pyside6_addons-6.9.3.dist-info/licenses/LicenseRef-Qt-Commercial.txt"
+    ]
+  },
+  {
+    "name": "shiboken6",
+    "version": "6.9.3",
+    "home_page": null,
+    "project_urls": [
+      "Homepage, https://pyside.org",
+      "Documentation, https://doc.qt.io/qtforpython",
+      "Repository, https://code.qt.io/cgit/pyside/pyside-setup.git/",
+      "Changelog, https://code.qt.io/cgit/pyside/pyside-setup.git/tree/doc/changelogs",
+      "Tracker, https://bugreports.qt.io/projects/PYSIDE"
+    ],
+    "license_expression": null,
+    "notices": [
+      "shiboken6/shiboken6-6.9.3.dist-info/licenses/LicenseRef-Qt-Commercial.txt"
+    ]
+  },
+  {
+    "name": "numpy",
+    "version": "2.2.6",
+    "home_page": null,
+    "project_urls": [
+      "homepage, https://numpy.org",
+      "documentation, https://numpy.org/doc/",
+      "source, https://github.com/numpy/numpy",
+      "download, https://pypi.org/project/numpy/#files",
+      "tracker, https://github.com/numpy/numpy/issues",
+      "release notes, https://numpy.org/doc/stable/release"
+    ],
+    "license_expression": null,
+    "notices": [
+      "numpy/numpy-2.2.6.dist-info/LICENSE.txt",
+      "numpy/numpy/_core/include/numpy/random/LICENSE.txt",
+      "numpy/numpy/ma/LICENSE",
+      "numpy/numpy/random/LICENSE.md"
+    ]
+  },
+  {
+    "name": "opencv-python",
+    "version": "4.12.0.88",
+    "home_page": "https://github.com/opencv/opencv-python",
+    "project_urls": [],
+    "license_expression": null,
+    "notices": [
+      "opencv-python/cv2/LICENSE-3RD-PARTY.txt",
+      "opencv-python/cv2/LICENSE.txt",
+      "opencv-python/opencv_python-4.12.0.88.dist-info/LICENSE-3RD-PARTY.txt",
+      "opencv-python/opencv_python-4.12.0.88.dist-info/LICENSE.txt"
+    ]
+  },
+  {
+    "name": "tifffile",
+    "version": "2026.9.20",
+    "home_page": "https://www.cgohlke.com",
+    "project_urls": [
+      "Bug Tracker, https://github.com/cgohlke/tifffile/issues",
+      "Source Code, https://github.com/cgohlke/tifffile",
+      "Documentation, https://www.cgohlke.com/docs/tifffile/"
+    ],
+    "license_expression": null,
+    "notices": [
+      "tifffile/tifffile-2026.9.20.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "rapidocr-onnxruntime",
+    "version": "1.2.3",
+    "home_page": "https://github.com/RapidAI/RapidOCR",
+    "project_urls": [],
+    "license_expression": null,
+    "notices": []
+  },
+  {
+    "name": "onnxruntime",
+    "version": "1.31.0",
+    "home_page": "https://onnxruntime.ai",
+    "project_urls": [],
+    "license_expression": null,
+    "notices": [
+      "onnxruntime/onnxruntime/LICENSE",
+      "onnxruntime/onnxruntime/ThirdPartyNotices.txt"
+    ]
+  },
+  {
+    "name": "Pillow",
+    "version": "12.3.0",
+    "home_page": null,
+    "project_urls": [
+      "Release notes, https://pillow.readthedocs.io/en/stable/releasenotes/index.html",
+      "Changelog, https://github.com/python-pillow/Pillow/releases",
+      "Documentation, https://pillow.readthedocs.io",
+      "Funding, https://tidelift.com/subscription/pkg/pypi-pillow?utm_source=pypi-pillow&utm_medium=pypi",
+      "Homepage, https://python-pillow.github.io",
+      "Mastodon, https://fosstodon.org/@pillow",
+      "Source, https://github.com/python-pillow/Pillow"
+    ],
+    "license_expression": "MIT-CMU",
+    "notices": [
+      "Pillow/pillow-12.3.0.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "shapely",
+    "version": "2.2.0",
+    "home_page": null,
+    "project_urls": [
+      "Documentation, https://shapely.readthedocs.io/",
+      "Repository, https://github.com/shapely/shapely"
+    ],
+    "license_expression": "BSD-3-Clause",
+    "notices": [
+      "shapely/shapely-2.2.0.dist-info/licenses/LICENSE.txt",
+      "shapely/shapely-2.2.0.dist-info/licenses/LICENSE_GEOS",
+      "shapely/shapely-2.2.0.dist-info/licenses/LICENSE_win32"
+    ]
+  },
+  {
+    "name": "pyclipper",
+    "version": "1.4.0",
+    "home_page": "https://github.com/fonttools/pyclipper",
+    "project_urls": [],
+    "license_expression": null,
+    "notices": [
+      "pyclipper/pyclipper-1.4.0.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "PyYAML",
+    "version": "6.0.3",
+    "home_page": "https://pyyaml.org/",
+    "project_urls": [
+      "Bug Tracker, https://github.com/yaml/pyyaml/issues",
+      "CI, https://github.com/yaml/pyyaml/actions",
+      "Documentation, https://pyyaml.org/wiki/PyYAMLDocumentation",
+      "Mailing lists, http://lists.sourceforge.net/lists/listinfo/yaml-core",
+      "Source Code, https://github.com/yaml/pyyaml"
+    ],
+    "license_expression": null,
+    "notices": [
+      "PyYAML/pyyaml-6.0.3.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "six",
+    "version": "1.17.0",
+    "home_page": "https://github.com/benjaminp/six",
+    "project_urls": [],
+    "license_expression": null,
+    "notices": [
+      "six/six-1.17.0.dist-info/LICENSE"
+    ]
+  },
+  {
+    "name": "flatbuffers",
+    "version": "25.12.19",
+    "home_page": "https://google.github.io/flatbuffers/",
+    "project_urls": [
+      "Documentation, https://google.github.io/flatbuffers/",
+      "Source, https://github.com/google/flatbuffers"
+    ],
+    "license_expression": null,
+    "notices": []
+  },
+  {
+    "name": "packaging",
+    "version": "26.3",
+    "home_page": null,
+    "project_urls": [
+      "Documentation, https://packaging.pypa.io/",
+      "Source, https://github.com/pypa/packaging"
+    ],
+    "license_expression": "Apache-2.0 OR BSD-2-Clause",
+    "notices": [
+      "packaging/packaging-26.3.dist-info/licenses/LICENSE",
+      "packaging/packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+      "packaging/packaging-26.3.dist-info/licenses/LICENSE.BSD"
+    ]
+  },
+  {
+    "name": "protobuf",
+    "version": "7.36.2",
+    "home_page": "https://developers.google.com/protocol-buffers/",
+    "project_urls": [],
+    "license_expression": null,
+    "notices": [
+      "protobuf/protobuf-7.36.2.dist-info/LICENSE"
+    ]
+  },
+  {
+    "name": "pyinstaller",
+    "version": "6.12.0",
+    "home_page": "https://www.pyinstaller.org/",
+    "project_urls": [
+      "Source, https://github.com/pyinstaller/pyinstaller"
+    ],
+    "license_expression": null,
+    "notices": [
+      "pyinstaller/pyinstaller-6.12.0.dist-info/COPYING.txt"
+    ]
+  }
+]

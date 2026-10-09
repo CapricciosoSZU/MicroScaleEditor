@@ -1,0 +1,25 @@
+{
+  "version": "0.1.0",
+  "executable": "MicroScaleEditor.exe",
+  "sha256": "557529a4a9b33db6b9b31c36c67f0c5fb4bd75a9993b5ba7002ffd33c7126c51",
+  "size_bytes": 132173954,
+  "status": "passed",
+  "frozen": true,
+  "synthetic_inputs": true,
+  "python_removed_from_path": true,
+  "separate_unicode_directory": true,
+  "checks": [
+    "GUI startup and persistent synthetic examples",
+    "Examples outside extraction directory",
+    "Bundled local OCR recognizes 50 nm / 250 px",
+    "Scale geometry 25 px",
+    "PNG export",
+    "SVG vector text and bar",
+    "Full-resolution clipboard",
+    "Project save/load and masks",
+    "Recovery record",
+    "Input unchanged",
+    "16-bit TIFF exact crop"
+  ],
+  "check_elapsed_seconds": 5.195
+}
