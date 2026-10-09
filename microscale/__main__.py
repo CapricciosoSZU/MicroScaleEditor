@@ -17,7 +17,10 @@ def main():
     parser.add_argument("--output", help="Recipe output filename")
     parser.add_argument("--format", choices=["png", "tiff", "data-tiff", "svg"], default="png")
     parser.add_argument("--self-test", metavar="FOLDER", help="Run the packaged GUI/OCR/export check and write its report")
+    parser.add_argument("--test-images", metavar="FOLDER", action="append", help="Also validate local images recursively during --self-test; repeat for multiple folders; reports remain local")
     args = parser.parse_args()
+    if args.test_images and not args.self_test:
+        parser.error("--test-images requires --self-test")
     logs = runtime_dir("logs")
     handlers = [RotatingFileHandler(logs / "microscale.log", maxBytes=5_000_000, backupCount=3, encoding="utf-8")]
     if sys.stderr is not None:
@@ -31,7 +34,7 @@ def main():
     app.setOrganizationName("MicroScale")
     if args.self_test:
         from .diagnostics import run_self_test
-        return run_self_test(app, Path(args.self_test))
+        return run_self_test(app, Path(args.self_test), [Path(path) for path in args.test_images] if args.test_images else None)
     if args.recipe:
         if not args.output:
             parser.error("--recipe requires --output")

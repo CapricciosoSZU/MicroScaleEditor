@@ -11,6 +11,7 @@ The `third-party-licenses` directory contains notices copied from the installed 
 | NumPy | 2.2.6 | https://github.com/numpy/numpy/tree/v2.2.6 |
 | OpenCV Python | 4.12.0.88 | https://github.com/opencv/opencv-python |
 | tifffile | 2026.9.20 | https://github.com/cgohlke/tifffile |
+| imagecodecs | 2026.8.16 | https://github.com/cgohlke/imagecodecs |
 | RapidOCR ONNX Runtime backend | 1.2.3 | https://github.com/RapidAI/RapidOCR |
 | ONNX Runtime | 1.31.0 | https://github.com/microsoft/onnxruntime |
 | Pillow | 12.3.0 | https://github.com/python-pillow/Pillow |

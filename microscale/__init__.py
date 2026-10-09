@@ -1,2 +1,2 @@
 """MicroScale Editor: sample coordinates are never screen coordinates."""
-__version__ = "0.1.0"
+__version__ = "0.1.1"

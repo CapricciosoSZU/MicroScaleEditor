@@ -19,12 +19,12 @@ from .rendering import compose, export_file
 from .runtime import frozen, runtime_dir, user_data_dir
 
 
-def run_self_test(app, output_dir):
+def run_self_test(app, output_dir, test_images=None):
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     if any(output_dir.iterdir()):
         raise ValueError("Use an empty directory for --self-test to avoid stale output evidence.")
-    report = {"frozen": frozen(), "executable": sys.executable, "user_data_dir": str(user_data_dir()), "synthetic": True, "checks": []}
+    report = {"frozen": frozen(), "executable": sys.executable, "user_data_dir": str(user_data_dir()), "synthetic_inputs_only": not bool(test_images), "checks": []}
     window = MainWindow()
     window.settings = QSettings(str(output_dir / "test-settings.ini"), QSettings.Format.IniFormat)
     window.recovery_dir = output_dir / "recovery"
@@ -46,6 +46,9 @@ def run_self_test(app, output_dir):
         window.open_examples()
         settle()
         check("GUI startup and persistent synthetic examples", window.document is not None and window.composition is not None)
+        available = window.screen().availableGeometry()
+        frame = window.frameGeometry()
+        check("Startup centered within usable screen", available.contains(frame) and (frame.center() - available.center()).manhattanLength() <= 2)
         example_dir = runtime_dir("examples")
         check("Examples outside extraction directory", str(getattr(sys, "_MEIPASS", "not-frozen")) not in str(example_dir))
         window.load_image(example_dir / "SYNTHETIC_50nm_250px.png")
@@ -93,12 +96,28 @@ def run_self_test(app, output_dir):
         outputs = export_file(output_dir / "native-data.tif", source.pixels, display_rgba(source.pixels, project.display_low, project.display_high), project, "data-tiff")
         data = tifffile.imread(outputs[0])
         check("16-bit TIFF exact crop", data.dtype == np.uint16 and np.array_equal(data, source.pixels[23:173, 17:227]))
+        for dtype, channels, predictor in ((np.uint8, 1, False), (np.uint16, 1, True), (np.uint8, 4, False), (np.float32, 1, True)):
+            shape = (64, 96) if channels == 1 else (64, 96, channels)
+            rng = np.random.default_rng(251)
+            original = rng.normal(2000, 3000, shape).astype(dtype) if dtype == np.float32 else rng.integers(0, np.iinfo(dtype).max, shape, dtype=dtype)
+            compressed = output_dir / f"synthetic-lzw-{np.dtype(dtype)}-{channels}.tif"
+            tifffile.imwrite(compressed, original, compression="lzw", predictor=predictor, photometric="minisblack" if channels == 1 else "rgb")
+            decoded = read_source(compressed)
+            check(f"Bundled LZW {np.dtype(dtype)} {channels}-channel exact decode", decoded.pixels.dtype == original.dtype and np.array_equal(decoded.pixels, original))
         window.properties.setCurrentIndex(2)
         window.view_tabs.setCurrentIndex(1)
         window.output_view.fit()
         window.notice.setText("Standalone verification passed. Synthetic input only; original pixels preserved.")
         app.processEvents()
         window.grab().save(str(output_dir / "packaged-gui.png"))
+        if test_images is not None:
+            report["external_images"] = []
+            for dataset_index, folder in enumerate(test_images):
+                records = validate_external_images(window, settle, folder, output_dir / "local-images" / f"dataset-{dataset_index + 1}")
+                for record in records:
+                    record["dataset_index"] = dataset_index + 1
+                report["external_images"].extend(records)
+            check("All supplied local images passed", all(item["status"] == "passed" for item in report["external_images"]))
         report["status"] = "passed"
         code = 0
     except Exception:
@@ -117,3 +136,77 @@ def run_self_test(app, output_dir):
             window.close()
             app.processEvents()
     return code
+
+
+def validate_external_images(window, settle, input_dir, output_dir):
+    """Read-only local corpus checks. Filenames and results are never uploaded."""
+    from PIL import Image
+    input_dir = input_dir.resolve()
+    files = sorted(p for p in input_dir.rglob("*") if p.is_file() and p.suffix.lower() in {".tif", ".tiff", ".png", ".jpg", ".jpeg"})
+    if not files:
+        raise ValueError("No supported images found in the supplied test folder.")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    records = []
+    ocr_seen = set()
+    for index, path in enumerate(files):
+        record = {"file": str(path.relative_to(input_dir)), "checks": []}
+        def require(name, condition):
+            if not condition:
+                raise AssertionError(name)
+            record["checks"].append(name)
+        try:
+            initial_hash = file_hash(path)
+            # Bound the diagnostic process's memory; this is a fresh test window.
+            window.document = None
+            window.image_list.clear()
+            window.documents.clear()
+            window.load_image(path)
+            settle()
+            doc = window.document
+            require("GUI loaded requested source", doc is not None and Path(doc.source.path) == path and window.composition is not None)
+            source, p = doc.source, doc.project
+            record.update(shape=list(source.pixels.shape), dtype=str(source.pixels.dtype))
+            require("Source array is read-only", not source.pixels.flags.writeable)
+            with Image.open(path) as independent:
+                reference = np.asarray(independent)
+                if independent.mode == "P":
+                    reference = np.asarray(independent.convert("RGBA" if "transparency" in independent.info else "RGB"))
+            require("Independent Pillow decoder agrees", source.pixels.dtype == reference.dtype and np.array_equal(source.pixels, reference))
+            compression = "PNG/JPEG"
+            if path.suffix.lower() in {".tif", ".tiff"}:
+                with tifffile.TiffFile(path) as tif:
+                    compression = tif.pages[0].compression.name
+            record["compression"] = compression
+            if compression not in ocr_seen:
+                window.detect_source()
+                settle()
+                require("OCR worker completed", "#ff8392" not in window.notice.styleSheet())
+                record["ocr_candidates"] = len(p.candidates)
+                record["ocr_is_calibration_ground_truth"] = False
+                ocr_seen.add(compression)
+            png = output_dir / f"image-{index:03d}.png"
+            window.start_export(str(png))
+            settle()
+            require("GUI PNG export", png.is_file() and read_source(png).pixels.shape == doc.rgba.shape)
+            project_file = output_dir / f"image-{index:03d}.json"
+            window.save_to(str(project_file))
+            settle()
+            require("Project save and reload", load_project(project_file).to_dict() == p.to_dict())
+            cropped = deepcopy(p)
+            h, w = source.pixels.shape[:2]
+            x, y, cw, ch = w // 8, h // 8, w // 2, h // 2
+            cropped.crop = Crop(rect=[x, y, cw, ch])
+            cropped.style.enabled = False
+            outputs = export_file(output_dir / f"image-{index:03d}-crop.tif", source.pixels, doc.rgba, cropped, "data-tiff")
+            crop = tifffile.imread(outputs[0])
+            require("Native data crop exact", crop.dtype == source.pixels.dtype and np.array_equal(crop, source.pixels[y:y + ch, x:x + cw]))
+            require("Original file unchanged", file_hash(path) == initial_hash)
+            record["status"] = "passed"
+        except Exception:
+            record["status"] = "failed"
+            record["traceback"] = traceback.format_exc()
+            record["ui_message"] = window.notice.text()
+        records.append(record)
+        (output_dir / "report.json").write_text(json.dumps(records, indent=2, ensure_ascii=False), encoding="utf-8")
+        logging.info("Local image verification %s/%s: %s", index + 1, len(files), record["status"])
+    return records

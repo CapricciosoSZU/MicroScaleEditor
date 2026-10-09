@@ -7,7 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / "third-party-licenses"
-NAMES = ("PySide6", "PySide6_Essentials", "PySide6_Addons", "shiboken6", "numpy", "opencv-python", "tifffile", "rapidocr-onnxruntime", "onnxruntime", "Pillow", "shapely", "pyclipper", "PyYAML", "six", "flatbuffers", "packaging", "protobuf", "pyinstaller")
+NAMES = ("PySide6", "PySide6_Essentials", "PySide6_Addons", "shiboken6", "numpy", "opencv-python", "tifffile", "imagecodecs", "rapidocr-onnxruntime", "onnxruntime", "Pillow", "shapely", "pyclipper", "PyYAML", "six", "flatbuffers", "packaging", "protobuf", "pyinstaller")
 
 def main():
     DEST.mkdir(exist_ok=True)

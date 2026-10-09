@@ -13,7 +13,7 @@ import traceback
 import cv2
 import numpy as np
 from PySide6.QtCore import QObject, QPointF, QRectF, QRunnable, QSettings, QThreadPool, QTimer, Qt, Signal
-from PySide6.QtGui import QAction, QColor, QKeySequence, QPixmap
+from PySide6.QtGui import QAction, QColor, QCursor, QKeySequence, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QMainWindow, QMessageBox,
     QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTabWidget, QToolBar, QVBoxLayout, QWidget)
@@ -25,6 +25,7 @@ from .image_io import Source, array_to_qimage, display_rgba, project_for, qimage
 from .model import Calibration, Crop, History, Project, Style, atomic_json, file_hash, load_project, relink_source, save_project
 from .rendering import change_view, compose, export_file, inset_project, render_image
 from .runtime import runtime_dir, user_data_dir
+from . import __version__
 
 log = logging.getLogger(__name__)
 
@@ -166,8 +167,10 @@ class StyleForm(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MicroScale Editor")
+        self.setWindowTitle(f"MicroScale Editor {__version__}")
         self.resize(1480, 920)
+        self._startup_positioned = False
+        self._startup_screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
         self.documents = []
         self.document = None
         self.jobs = set()
@@ -194,6 +197,31 @@ class MainWindow(QMainWindow):
         self.autosave_timer.setInterval(900)
         self.autosave_timer.timeout.connect(self.autosave)
         self._build_ui()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._startup_positioned:
+            self._startup_positioned = True
+            self._center_startup_window()
+            # Native title-bar/frame margins settle after the first show event.
+            QTimer.singleShot(0, self._center_startup_window)
+
+    def _center_startup_window(self):
+        screen = self._startup_screen or self.screen()
+        if screen is None or self.isMaximized() or self.isFullScreen():
+            return
+        available = screen.availableGeometry()
+        handle = self.windowHandle()
+        if handle is not None and handle.screen() is not screen:
+            handle.setScreen(screen)
+        frame = self.frameGeometry()
+        extra_w = max(0, frame.width() - self.width())
+        extra_h = max(0, frame.height() - self.height())
+        self.resize(max(1, min(1480, available.width() - extra_w - 32)),
+                    max(1, min(920, available.height() - extra_h - 32)))
+        frame = self.frameGeometry()
+        frame.moveCenter(available.center())
+        self.move(frame.topLeft())
 
     def safe(self, function):
         def call(*_):

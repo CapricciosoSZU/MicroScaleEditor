@@ -2,6 +2,14 @@
 
 Original arrays remain read-only. Edits are recorded as parameters and masks. Specimen calibration is reviewed separately from display and layout.
 
+## Opening several images
+
+**Open image…** accepts multiple selections: Ctrl selects individual files, Shift selects a range, and Ctrl+A selects all files in the current folder. Loaded sources appear in the left-hand list, with independent calibration and editing state. Export is currently per image. Large sets use memory proportional to the loaded data.
+
+The window initially centers on the monitor containing the pointer, using the available work area so it avoids the taskbar. Moving the window yourself is respected when it is hidden and shown again. The title bar displays the application version.
+
+LZW-compressed TIFFs are supported by the bundled decoder, including floating-point data. Presentation previews use an explicit display window; native data TIFF export preserves original sample values and dtype.
+
 ## Three input workflows
 
 ### Clean source

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from PySide6.QtCore import QPointF, Qt, QSettings
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QFileDialog
 
 from microscale.gui import MainWindow, ReferenceDialog
 from microscale.image_io import read_source, qimage_to_array
@@ -60,6 +60,40 @@ def open_clean(window, examples):
     wait_until(lambda: window.document is not None)
     settled(window)
     assert window.composition is not None
+
+
+def test_startup_centered_and_manual_position_preserved(window):
+    QApplication.processEvents()
+    available = window.screen().availableGeometry()
+    frame = window.frameGeometry()
+    assert available.contains(frame)
+    assert (frame.center() - available.center()).manhattanLength() <= 2
+    window.move(window.pos().x() + 12, window.pos().y() + 9)
+    QApplication.processEvents()
+    moved = window.pos()
+    window.hide()
+    window.show()
+    QApplication.processEvents()
+    assert window.pos() == moved
+
+
+def test_multi_select_import_keeps_each_source_state(window, examples, tmp_path, monkeypatch):
+    import tifffile
+    compressed = tmp_path / "batch LZW.tif"
+    tifffile.imwrite(compressed, np.arange(64 * 80, dtype=np.uint16).reshape(64, 80), compression="lzw")
+    paths = [str(examples / "SYNTHETIC_clean.png"), str(examples / "SYNTHETIC_16bit_OME.tif"), str(compressed)]
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", lambda *args, **kwargs: (paths, "Images"))
+    window.open_images()
+    settled(window)
+    assert window.image_list.count() == 3
+    assert {doc.source.path for doc in window.documents} == {str(Path(p).resolve()) for p in paths}
+    for index, doc in enumerate(window.documents):
+        window.image_list.setCurrentRow(index)
+        settled(window)
+        assert window.document is doc
+        expected = "Pending" if doc.source.path.endswith("SYNTHETIC_16bit_OME.tif") else "Uncalibrated"
+        assert doc.project.calibration.status == expected
+        assert not doc.source.pixels.flags.writeable
 
 
 def calibrate_manual(window):

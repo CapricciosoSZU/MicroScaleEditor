@@ -8,7 +8,7 @@ Crop images, review calibration evidence, edit scale-bar annotations, create lin
 
 ![Packaged MicroScale Editor running on a synthetic example](docs/images/editor.png)
 
-> All included images are explicitly **SYNTHETIC**, not experimental micrographs. Version 0.1.0 has been tested on synthetic inputs; real SEM/TEM instrument data has not yet been validated.
+> All publicly included images are explicitly **SYNTHETIC**. Private SEM/TEM files are used only for local validation; neither those images nor their filenames are published. See the validation record for the tested scope.
 
 ## Features
 
@@ -20,11 +20,13 @@ Crop images, review calibration evidence, edit scale-bar annotations, create lin
 - **Review tools:** source-coordinate measurements, protected regions, before/after comparison, change overlays, and export checks.
 - **Traceable outputs:** PNG, presentation TIFF, source-dtype data TIFF, editable SVG annotations, JSON recipes, source hashes, project history, and recovery.
 - **Offline OCR:** Windows downloads include RapidOCR, ONNX Runtime CPU, and recognition models; no runtime model download.
+- **Compressed TIFF input:** bundled imagecodecs decoders support LZW images, including 8-bit, 16-bit, RGBA, and 32-bit floating-point samples.
+- **Multiple-image import:** select several files in **Open image…** using Ctrl/Shift/Ctrl+A. Each image has independent calibration and edits. Exports are currently performed per image.
 
 ## Get started on Windows
 
 1. Download `MicroScaleEditor.exe` from the [latest release](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest). The portable ZIP adds documentation and third-party notices.
-2. Double-click the EXE. No Python installation is needed. Initial extraction of bundled libraries may take a few seconds.
+2. Double-click the EXE. No Python installation is needed. It opens centered on the monitor containing the pointer and fits within the usable screen area. Initial extraction of bundled libraries may take a few seconds.
 3. Choose **File → Synthetic examples** to try a known example, or open your own image.
 4. Review and confirm sample calibration, choose a crop, adjust the bar, and run **Export check**.
 
@@ -77,7 +79,7 @@ Use `-Python 'C:\path\to\python.exe'` to choose an interpreter. Setup creates an
 .\build_exe.ps1 -InstallBuildTools
 ```
 
-Core dependencies: NumPy, OpenCV, PySide6, and tifffile. Tested versions are in `requirements-lock.txt`; build tools are in `requirements-build.txt`.
+Core dependencies: NumPy, OpenCV, PySide6, tifffile, and imagecodecs. Tested versions are in `requirements-lock.txt`; build tools are in `requirements-build.txt`.
 
 ## Reproduce and test
 
@@ -92,7 +94,7 @@ Core dependencies: NumPy, OpenCV, PySide6, and tifffile. Tested versions are in 
 .\.venv\Scripts\python.exe scripts\verify_exe.py
 ```
 
-**54 source tests** and **11 integration checks inside the actual EXE** passed. The latter include bundled OCR, 25 px scale geometry, PNG/SVG, clipboard, recovery, source integrity, and exact 16-bit TIFF cropping. This is local Windows verification, not a clean-machine or real-instrument certification. See [VALIDATION.md](VALIDATION.md).
+Checks cover synthetic geometry, compressed TIFF decoding, multiple-image import, centered startup, bundled OCR, PNG/SVG, clipboard, recovery, and native data preservation. Private SEM/TEM folders are also exercised locally. The exact EXE checksum and results are in [RELEASE_VALIDATION.json](docs/RELEASE_VALIDATION.json); the scope and limits are in [VALIDATION.md](VALIDATION.md). This is local Windows verification, not a clean-machine or calibration-accuracy certification.
 
 ## Project structure
 

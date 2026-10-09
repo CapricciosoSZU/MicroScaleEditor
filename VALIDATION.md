@@ -1,10 +1,10 @@
 # Validation record
 
-Date: **2026-10-09**. Version: **0.1.0**. Platform: local Windows x64.
+Date: **2026-10-09**. Version: **0.1.1**. Platform: local Windows x64.
 
-The source suite passed **54 tests in 34.86 seconds**, with no skipped tests. The actual single-file EXE passed **11 integration checks**, after copying it to a separate path containing spaces and non-ASCII characters, removing Python/Conda environment variables, and restricting PATH to Windows System32.
+The source suite passed **60 tests in 35.08 seconds**, with no skipped tests. The final frozen EXE passed **16 general checks plus the complete 127-image corpus check** (17 top-level checks) from a separate Unicode directory with Python/Conda variables removed and PATH restricted to Windows System32. Every supplied supported image passed GUI loading, independent decoding comparison, PNG export, project save/load, exact native TIFF cropping, and unchanged source hashes. The exact binary hash and its completed results are recorded in `docs/RELEASE_VALIDATION.json`.
 
-All inputs are explicitly **synthetic**. Real SEM/TEM instrument data, another physical computer, and a clean Windows VM have not been validated. OCR and reference registration use their real implementations.
+Public examples are explicitly **synthetic**. Local validation also covers two private SEM/TEM folders: 69 images (66 TIFF, 3 PNG) and 58 images (30 TIFF, 28 JPEG), for **127 images** in total. The second set includes 30 LZW-compressed float32 TIFFs at 2048 × 2048. Input files, filenames, detailed logs, and real-image screenshots remain local. Another physical computer and a clean Windows VM remain untested. OCR and registration use their real implementations; measurement accuracy is not inferred from successful file import.
 
 ## Source acceptance coverage
 
@@ -34,6 +34,8 @@ Additional checks cover calibration conflicts without averaging, square-pixel as
 
 ## Actual EXE checks
 
+The self-test includes the following 11 original checks, plus centered startup and four LZW dtype/channel regressions (uint8 gray, uint16 gray, RGBA, float32 with floating-point prediction).
+
 1. Start a Qt window and generate persistent synthetic examples.
 2. Verify examples live outside the one-file extraction directory.
 3. Load bundled OCR models and recognize 50 nm / 250 px.
@@ -62,7 +64,7 @@ Local reports are under `test-output`, intentionally excluded from Git. A checke
 .\.venv\Scripts\python.exe scripts\verify_exe.py
 ```
 
-The 54 tests comprise 43 core/parameterized cases, 8 GUI cases, 1 independent recipe process, and 2 runtime-path cases. GUI checks use real Qt mouse and keyboard events. Event processing is interleaved with waits that release the Python GIL so workers can complete.
+The 60 tests comprise 43 original core/parameterized cases, 4 LZW cases, 10 GUI cases, 1 independent recipe process, and 2 runtime-path cases. New GUI coverage checks centered startup, preservation of a manually moved window, and multiple-file import with independent calibration state. GUI checks use real Qt mouse and keyboard events. Event processing is interleaved with waits that release the Python GIL so workers can complete.
 
 ## Performance and limits
 
@@ -70,4 +72,14 @@ Synthetic 1024² previews were approximately 0.10–0.14 seconds in this environ
 
 OCR initialization limits ONNX threads without changing installed third-party source. Candidate checks use local regions. Preview jobs use debouncing and reject stale results. Raster text uses Qt glyph outlines for reproducibility with the same fonts; SVG retains editable text.
 
-Unverified areas include real instruments, vendor metadata, other machines, and different font environments. OCR and registration evidence require review. Single-page TIFF is supported; DM3/DM4, batches, FFT, PDF, inpainting, and generative filling are outside this version. The 150 MP ceiling does not guarantee enough memory.
+Unverified areas include calibration accuracy on real data, complex vendor metadata, other machines, and different font environments. OCR and registration evidence require review. Single-page TIFF is supported; DM3/DM4, batches, FFT, PDF, inpainting, and generative filling are outside this version. The 150 MP ceiling does not guarantee enough memory.
+
+## Private real-image workflow
+
+Each supported image is opened through the GUI, compared against the independent Pillow decoder, exported as PNG, saved/reloaded as a project, and cropped to a native-data TIFF. Crop values and dtype must match the source slice exactly, and input SHA-256 must remain unchanged. In particular, float32 data is preserved in the data TIFF; only the presentation preview uses an 8-bit window mapping.
+
+OCR is exercised on representative images from each compression class. Candidate counts are execution evidence, not ground truth for scale calibration. No detected real-image calibration is automatically confirmed. DOCX documents and a database file are outside the supported image formats. Public release evidence contains only anonymous counts and format/dtype summaries.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\verify_exe.py --test-images C:\path\to\sem --test-images E:\path\to\tem
+```
