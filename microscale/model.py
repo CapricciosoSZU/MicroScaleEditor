@@ -26,6 +26,7 @@ class Calibration:
     conflict_threshold: float = .02
     endpoints: list = field(default_factory=lambda: [[0., 0.], [250., 0.]])
     length_nm: float = 50.
+    endpoints_dirty: bool = False
     rule: str = "Solid bar: outer half-open edges. End ticks: center-to-center. Antialiasing: 50% local contrast."
 
     def propose(self, sx, sy, source, square=False, extra=None):
@@ -34,6 +35,7 @@ class Calibration:
         self.evidence.append({"sx": sx, "sy": sy, "source": source, "details": extra or {}})
         self.sx, self.sy, self.source, self.square_pixels = sx, sy, source, square
         self.status = "Pending"
+        self.endpoints_dirty = False
 
     def conflicts(self):
         found = []
@@ -44,6 +46,8 @@ class Calibration:
         return found
 
     def confirm(self, resolve=False):
+        if self.endpoints_dirty:
+            raise ValueError("Endpoints changed. Check Known length and click Use endpoints before confirming calibration.")
         if self.sx is None and self.sy is None:
             raise ValueError("No physical calibration is available.")
         if self.conflicts() and not resolve:
@@ -102,6 +106,7 @@ class Output:
     label_x: float = 16.
     label_y: float = 16.
     export_guides: bool = False
+    rotation_deg: float = 0.
 
 
 @dataclass

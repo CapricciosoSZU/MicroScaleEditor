@@ -13,6 +13,8 @@ Crop images, review calibration evidence, edit scale-bar annotations, create lin
 ## Features
 
 - **Calibration with evidence:** manual sample spacing, endpoint measurements, OME-TIFF physical sizes, local OCR candidates, and transfer from a matching reference. Calibration remains pending until reviewed and confirmed.
+- **Image rotation:** 90° left/right, 180°, and custom clockwise angles, with expanded output, horizontal scale labels, recorded transforms, and exact native quarter-turn data exports.
+- **Source-format export by default:** keep TIFF/PNG/JPEG file type and original bit depth with the new scale bar, including uint16 PNG/TIFF and float32 TIFF. One-click 2×/4× output scales annotation layout with the image.
 - **Six crop shapes:** rectangle, square, circle, ellipse, polygon, and freehand, with fixed/custom aspect ratios and transparent output.
 - **Editable scale bars:** physical length, position, font, color, thickness, end ticks, background plate, and reusable styles. A 5 nm bar at 0.2 nm/px is 25 native output pixels.
 - **Explicit annotation treatment:** separate line/text/background masks, with keep, crop, solid-fill, and opaque-plate workflows. Original pixels remain read-only.
@@ -46,29 +48,33 @@ Example only: an existing **50 nm / 250 px** bar establishes **0.2 nm/px**. A ne
 
 ### Manuals / 使用手册
 
-Both manuals cover the same v0.1.1 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
+Both manuals cover the same v0.2.0 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
 
-两份手册适用于 v0.1.1，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
+两份手册适用于 v0.2.0，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
 
 | Task / 操作 | English | 简体中文 |
 |---|---|---|
 | Complete manual / 完整手册 | [Read](docs/USER_GUIDE.md) | [阅读](docs/USER_GUIDE.zh-CN.md) |
 | Calibration / 校准 | [Step by step](docs/USER_GUIDE.md#three-input-workflows) | [操作步骤](docs/USER_GUIDE.zh-CN.md#three-input-workflows) |
 | Draw a scale bar / 绘制比例尺 | [Step by step](docs/USER_GUIDE.md#scale-bar-styling) | [操作步骤](docs/USER_GUIDE.zh-CN.md#scale-bar-styling) |
+| Rotation / 图像旋转 | [Controls and calibration](docs/USER_GUIDE.md#image-rotation) | [操作与校准](docs/USER_GUIDE.zh-CN.md#image-rotation) |
 | Troubleshooting / 常见问题 | [Find a fix](docs/USER_GUIDE.md#troubleshooting) | [排查问题](docs/USER_GUIDE.zh-CN.md#troubleshooting) |
 
-The manuals were rewritten on **2026-10-09**. Use these repository links for the revised text; the original v0.1.1 application ZIP contains the earlier English guide.
+The **v0.2.0** portable ZIP includes both updated manuals. For rotation, use **Crop → Image rotation** and inspect **Output pixel preview**. Source editing remains in original coordinates. Custom-angle calibrated bars need confirmed equal x/y spacing; quarter turns exchange the source axes as appropriate.
 
 ## Export formats
 
 | Format | Contents |
 |---|---|
+| Same as source (default) | Annotated output with source file type, dtype/bit depth, and channels; TIFF/PNG lossless, JPEG re-encoded at quality 98 |
 | PNG | 8-bit RGBA presentation using the recorded display window; transparency supported |
 | TIFF presentation + data | An 8-bit presentation TIFF plus a separate original-dtype `_data.tif` |
-| TIFF data only | Source values cropped without burning annotations or treatment layers into them; exact at native 1× sampling |
+| TIFF data only | Source values cropped without burning annotations or treatment layers into them; exact at native 1× with quarter-turn rotation only |
 | SVG | Embedded raster image with independent editable bars, labels, and inset objects |
 
 Every export includes a JSON sidecar with the transform, source hash, calibration, display mapping, and recipe. Nonrectangular data TIFFs retain original bounding-box values and use a separate validity mask. DPI/PPI and nominal magnification are never treated as specimen calibration.
+
+In **Export → Resolution**, choose **2×** or **4×** to enlarge output and annotation layout together. Initial sampling is 1×. Enlargement interpolates pixels; it does not add specimen detail. The default **Same as source (original bit depth)** retains sample precision outside annotated/treated areas. Grayscale remains grayscale; non-alpha inputs use white outside transparent crops. Display mapping is not baked into specimen values, so scientific TIFFs may look different in another viewer. Use **PNG presentation** for the mapped 8-bit appearance, or **TIFF data only** for data without new annotations. See both manuals for format details.
 
 ![Synthetic output with a linked inset and separate scale bars](examples/SYNTHETIC_demo_output.png)
 

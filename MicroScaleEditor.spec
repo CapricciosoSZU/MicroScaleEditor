@@ -6,7 +6,8 @@ from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, co
 root = Path(SPECPATH)
 datas = collect_data_files("rapidocr_onnxruntime")
 datas += [(str(root / name), "docs") for name in ("README.md", "PACKAGING.md", "THIRD_PARTY_NOTICES.md")]
-datas += [(str(root / "docs" / "USER_GUIDE.md"), "docs"), (str(root / "third-party-licenses"), "third-party-licenses")]
+datas += [(str(root / "docs" / name), "docs") for name in ("USER_GUIDE.md", "USER_GUIDE.zh-CN.md")]
+datas += [(str(root / "third-party-licenses"), "third-party-licenses")]
 binaries = collect_dynamic_libs("onnxruntime")
 binaries += collect_dynamic_libs("imagecodecs")
 # Conda-backed venvs do not expose these stdlib extension dependencies to

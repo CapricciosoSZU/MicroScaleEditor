@@ -395,3 +395,131 @@ def test_display_reset_and_solid_mask_confirmation(window, examples):
     settled(window)
     assert window.document.project.treatment == "keep"
     assert not window.document.project.pure_color_confirmed
+
+
+def test_crop_retains_calibration_and_pending_bar_explains_itself(window, examples):
+    open_clean(window, examples)
+    window.tool.setCurrentText("Endpoints")
+    for widget, value in zip(window.endpoint_fields, (100, 100, 350, 100)):
+        widget.setValue(value)
+    window.known_length.setText("50 nm")
+    window.endpoint_calibration()
+    window.confirm_calibration()
+    assert window.tool.currentText() == "Pan"
+    window.scale_form.enabled.setChecked(True)
+    window.scale_form.length.setText("5 nm")
+    window.apply_style()
+    calibration = deepcopy(window.document.project.calibration)
+    window.canvas_edit("crop-rect", ["rectangle", [100, 100, 577, 577]])
+    settled(window)
+    assert window.document.project.calibration == calibration
+    assert window.composition.scale_length_px == 25
+    for field, value in zip(window.crop_fields, (150, 150, 400, 300)):
+        field.setValue(value)
+    window.apply_crop()
+    settled(window)
+    assert window.document.project.calibration == calibration
+    window.known_length.setText("25 nm")
+    window.tool.setCurrentText("Endpoints")
+    drag(window.canvas, [100, 100], [120, 100])
+    settled(window)
+    assert window.document.project.calibration.status == "Pending"
+    assert window.known_length.text() == "25 nm"
+    assert window.composition.scale_rect is None
+    assert "endpoints changed" in window.scale_state.text()
+    assert "endpoints changed" in window.notice.text()
+    with pytest.raises(ValueError, match="Use endpoints"):
+        window.confirm_calibration()
+    window.undo(-1)
+    settled(window)
+    assert window.document.project.calibration.status == "Confirmed"
+    assert window.composition.scale_length_px == 25
+    assert "hidden" not in window.scale_state.text()
+
+
+def test_rotation_buttons_preview_drag_export_and_undo(window, examples, tmp_path):
+    from PySide6.QtWidgets import QPushButton
+    open_clean(window, examples)
+    calibrate_manual(window)
+    window.canvas_edit("crop-rect", ["rectangle", [100, 120, 500, 300]])
+    window.scale_form.enabled.setChecked(True)
+    window.scale_form.length.setText("5 nm")
+    window.apply_style()
+    settled(window)
+    original = window.document.source.pixels.copy()
+    button = next(b for b in window.findChildren(QPushButton) if b.text() == "Rotate right 90°")
+    button.click()
+    settled(window)
+    assert window.document.project.output.rotation_deg == 90
+    assert window.view_tabs.currentIndex() == 1
+    assert window.result_image.width() == 300 and window.result_image.height() == 500
+    assert window.composition.scale_length_px == 25
+    window.view_tabs.setCurrentIndex(0)
+    window.canvas.fit()
+    window.tool.setCurrentText("Move scale")
+    x, y, w, h = window.composition.scale_rect
+    a = window.composition.to_source([x + w / 2, y + h / 2])
+    b = window.composition.to_source([x + w / 2 - 20, y + h / 2 - 10])
+    drag(window.canvas, a, b)
+    settled(window)
+    assert window.document.project.style.x == pytest.approx(x - 20, abs=2)
+    assert window.document.project.style.y == pytest.approx(y - 10, abs=2)
+    p = window.document.project
+    p.style.anchor = "bottom-right"
+    window.commit()
+    window.rotation_degrees.setValue(17.5)
+    next(b for b in window.findChildren(QPushButton) if b.text() == "Apply rotation").click()
+    settled(window)
+    assert window.document.project.output.rotation_deg == 17.5
+    assert not [i for i in window.composition.issues if i.severity == "error"]
+    window.start_export(str(tmp_path / "rotated.png"))
+    settled(window)
+    np.testing.assert_array_equal(read_source(tmp_path / "rotated.png").pixels, qimage_to_array(window.result_image))
+    window.save_to(str(tmp_path / "rotated-project.json"))
+    settled(window)
+    assert load_project(tmp_path / "rotated-project.json").output.rotation_deg == 17.5
+    window.undo(-1)
+    settled(window)
+    assert window.document.project.output.rotation_deg == 90
+    window.undo(1)
+    settled(window)
+    assert window.document.project.output.rotation_deg == 17.5
+    np.testing.assert_array_equal(window.document.source.pixels, original)
+    window.properties.setCurrentIndex(1)
+    window.grab().save(str(Path(__file__).resolve().parent.parent / "test-output/rotation-gui.png"))
+
+
+def test_default_source_export_and_resolution_presets(window, examples, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QPushButton
+    window.load_image(examples / "SYNTHETIC_16bit_OME.tif")
+    settled(window)
+    assert window.export_kind.currentText() == "Same as source (original bit depth)"
+    calibrate_manual(window)
+    window.canvas_edit("crop-rect", ["rectangle", [100, 100, 400, 300]])
+    window.scale_form.enabled.setChecked(True)
+    window.scale_form.length.setText("5 nm")
+    window.apply_style()
+    settled(window)
+    before = deepcopy(window.document.project)
+    for factor in (2, 4):
+        next(b for b in window.findChildren(QPushButton) if b.text() == f"{factor}×").click()
+        settled(window)
+        p = window.document.project
+        assert p.calibration == before.calibration and p.crop == before.crop
+        assert p.style.font_size == before.style.font_size * factor
+        assert p.style.thickness == before.style.thickness * factor
+        assert window.composition.scale_length_px == 25 * factor
+        assert (window.result_image.width(), window.result_image.height()) == (400 * factor, 300 * factor)
+        assert not any(i.severity == "error" for i in window.composition.issues)
+    window.undo(-1)
+    settled(window)
+    assert window.document.project.output.scale == 2
+    assert window.document.project.style.font_size == before.style.font_size * 2
+    target = tmp_path / "default-export.tif"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **kw: (str(target), ""))
+    window.export_dialog()
+    settled(window)
+    data = read_source(target).pixels
+    assert data.dtype == np.uint16 and data.shape == (600, 800)
+    assert np.unique(data[:200, :200]).size > 256
+    assert "Exported:" in window.notice.text()

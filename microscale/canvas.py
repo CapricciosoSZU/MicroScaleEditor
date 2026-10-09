@@ -6,10 +6,10 @@ import math
 
 import numpy as np
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap, QTransform
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
-from .geometry import normalized_rect, polygon_valid, to_source, distance, constrain_rect
+from .geometry import normalized_rect, polygon_valid, distance, constrain_rect
 from .image_io import array_to_qimage
 
 
@@ -123,8 +123,12 @@ class EditorCanvas(ImageView):
         self.project, self.composition = project, composition
         self.set_image(source_image, fit)
         self.result_item.setPixmap(QPixmap.fromImage(result_image))
-        self.result_item.setPos(composition.bbox[0], composition.bbox[1])
-        self.result_item.setScale(1 / composition.k)
+        matrix = composition.matrix
+        transform = QTransform(matrix[0, 0], matrix[1, 0], matrix[0, 1], matrix[1, 1], matrix[0, 2], matrix[1, 2])
+        inverse, ok = transform.inverted()
+        if not ok:
+            raise ValueError("Output transform is not invertible.")
+        self.result_item.setTransform(inverse)
         self.mask_item.setPixmap(QPixmap.fromImage(mask_image) if mask_image is not None else QPixmap())
         self.mask_item.setVisible(self.show_masks and not self.before)
         self.viewport().update()
@@ -143,7 +147,10 @@ class EditorCanvas(ImageView):
         return [max(0., min(rect.width(), point.x())), max(0., min(rect.height(), point.y()))]
 
     def scene_rect_for_output(self, rect):
-        return [*to_source(rect[:2], self.composition.bbox, self.composition.k), rect[2] / self.composition.k, rect[3] / self.composition.k]
+        x, y, w, h = rect
+        pts = np.array([self.composition.to_source(p) for p in ((x, y), (x + w, y), (x + w, y + h), (x, y + h))])
+        lo, hi = pts.min(0), pts.max(0)
+        return [*lo.tolist(), *(hi - lo).tolist()]
 
     def handles(self, crop):
         if crop.kind in ("polygon", "freehand"):
@@ -192,8 +199,9 @@ class EditorCanvas(ImageView):
         elif self.mode == "Move scale" and self.composition.scale_rect:
             self.drag_target = ("scale", self.composition.scale_rect[:2])
         elif self.mode == "Move inset" and self.composition.inset_rect:
-            rect = self.scene_rect_for_output(self.composition.inset_rect)
-            if math.dist(point, [rect[0] + rect[2], rect[1] + rect[3]]) < tolerance * 2:
+            rect = self.composition.inset_rect
+            corner = self.composition.to_source([rect[0] + rect[2], rect[1] + rect[3]])
+            if math.dist(point, corner) < tolerance * 2:
                 self.drag_target = ("inset-size", self.project.inset.width)
             else:
                 self.drag_target = ("inset", [self.project.inset.x, self.project.inset.y])
@@ -271,10 +279,11 @@ class EditorCanvas(ImageView):
             elif kind == "endpoint":
                 self.edited.emit("endpoints", self.draft)
             elif kind in ("scale", "inset"):
-                delta = [(point[i] - self.start[i]) * self.composition.k for i in (0, 1)]
+                end, start = self.composition.to_output(point), self.composition.to_output(self.start)
+                delta = [end[i] - start[i] for i in (0, 1)]
                 self.edited.emit(kind + "-position", [value[i] + delta[i] for i in (0, 1)])
             elif kind == "inset-size":
-                self.edited.emit("inset-width", max(16., value + (point[0] - self.start[0]) * self.composition.k))
+                self.edited.emit("inset-width", max(16., value + self.composition.to_output(point)[0] - self.composition.to_output(self.start)[0]))
         elif self.mode in ("Mask brush", "Mask erase"):
             self.edited.emit("mask", {"kind": "brush", "layer": self.mask_layer, "points": self.points or [point], "radius": self.brush_radius, "erase": self.mode == "Mask erase"})
         elif self.mode == "Crop freehand":

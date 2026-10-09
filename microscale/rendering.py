@@ -17,7 +17,8 @@ import tifffile
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPainterPath, QPen
 
-from .geometry import bounds, crop_mask, format_length, output_geometry, positive, to_output
+from .geometry import (bounds, crop_mask, format_length, output_geometry, positive,
+    rotation_angle, rotation_frame, output_matrix, transformed_point, rotated_spacing, scale_calibration_message)
 from .image_io import array_to_qimage, qimage_to_array, write_png, available_output
 from .detection import build_masks
 from .model import Crop, Output, atomic_json
@@ -44,6 +45,23 @@ class Composition:
     scale_rect: list | None = None
     scale_length_px: float | None = None
     inset_rect: list | None = None
+    rotation_deg: float = 0.
+
+    @property
+    def matrix(self):
+        return output_matrix(self.bbox, self.k, self.rotation_deg)
+
+    def to_output(self, point):
+        return transformed_point(point, self.matrix)
+
+    def to_source(self, point):
+        return transformed_point(point, cv2.invertAffineTransform(self.matrix))
+
+    def output_rect(self, rect):
+        x, y, w, h = rect
+        pts = np.array([self.to_output(p) for p in ((x, y), (x + w, y), (x + w, y + h), (x, y + h))])
+        lo, hi = pts.min(0), pts.max(0)
+        return [*lo.tolist(), *(hi - lo).tolist()]
 
 
 def rgb(color):
@@ -76,11 +94,25 @@ def resample(image, size, k, nearest=False):
     return cv2.warpAffine(image, transform, size, flags=cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
 
+def rotate_sample(image, size, k, angle, nearest=False):
+    angle = rotation_angle(angle)
+    if angle % 90 == 0:
+        # Right-angle native exports are exact array permutations for every dtype.
+        oriented = np.rot90(image, -int(angle / 90))
+        return resample(oriented, size, k, nearest)
+    matrix, _ = rotation_frame(image.shape[1], image.shape[0], angle)
+    matrix *= k
+    # Convert edge coordinates to OpenCV's integer pixel-center coordinates.
+    matrix[:, 2] += matrix[:, :2] @ np.array([.5, .5]) - .5
+    return cv2.warpAffine(image, matrix, size, flags=cv2.INTER_NEAREST if nearest else cv2.INTER_LINEAR,
+                          borderMode=cv2.BORDER_CONSTANT if nearest else cv2.BORDER_REPLICATE, borderValue=0)
+
+
 def make_base(rgba, crop, output):
     bbox, k, size = output_geometry(crop, rgba.shape, output)
     x, y, x2, y2 = bbox
-    base = resample(rgba[y:y2, x:x2], size, k)
-    valid = resample(crop_mask(crop, rgba.shape).astype(np.uint8), size, k, True).astype(bool)
+    base = rotate_sample(rgba[y:y2, x:x2], size, k, output.rotation_deg)
+    valid = rotate_sample(crop_mask(crop, rgba.shape).astype(np.uint8), size, k, output.rotation_deg, True).astype(bool)
     if crop.background == "transparent":
         base[..., 3] = np.where(valid, base[..., 3], 0)
     else:
@@ -102,9 +134,11 @@ def font_for(style, output):
 def scale_primitives(style, calibration, k, size, output):
     if not style.enabled:
         return [], None, None
-    if calibration.usable_x is None:
-        raise ValueError("A confirmed horizontal calibration is required for the scale bar.")
-    length = positive(style.length_nm, "Scale length") * k / calibration.usable_x
+    message = scale_calibration_message(calibration, output.rotation_deg)
+    if message:
+        raise ValueError(message)
+    sx, _ = rotated_spacing(calibration, output.rotation_deg)
+    length = positive(style.length_nm, "Scale length") * k / sx
     thickness = output.line_pt / 72 * output.dpi if output.mode == "print" else style.thickness
     thickness = positive(thickness, "Bar thickness")
     font = font_for(style, output)
@@ -147,6 +181,39 @@ def contained(rect, valid):
     return x2 > x1 and y2 > y1 and bool(valid[y1:y2, x1:x2].all())
 
 
+def fit_rotated_anchor(primitives, rect, valid):
+    """Find the nearest valid integer placement of an anchored annotation group."""
+    if rect is None or contained(rect, valid):
+        return rect
+    x, y, w, h = rect
+    iw, ih = math.ceil(w), math.ceil(h)
+    if iw > valid.shape[1] or ih > valid.shape[0]:
+        return rect
+    fits = cv2.erode(valid.astype(np.uint8), np.ones((ih, iw), np.uint8), anchor=(0, 0),
+                     borderType=cv2.BORDER_CONSTANT, borderValue=0)
+    best, score = None, math.inf
+    for row in sorted(range(valid.shape[0] - ih + 1), key=lambda value: abs(value - y)):
+        if (row - y) ** 2 > score:
+            break
+        cols = np.flatnonzero(fits[row, :valid.shape[1] - iw + 1])
+        if cols.size:
+            col = int(cols[np.argmin(abs(cols - x))])
+            distance2 = (col - x) ** 2 + (row - y) ** 2
+            if distance2 < score:
+                best, score = (col, row), distance2
+    if best is None:
+        return rect
+    dx, dy = best[0] - x, best[1] - y
+    for primitive in primitives:
+        if primitive["type"] == "rect":
+            primitive["rect"][0] += dx
+            primitive["rect"][1] += dy
+        elif primitive["type"] == "text":
+            primitive["x"] += dx
+            primitive["y"] += dy
+    return [*best, w, h]
+
+
 def roi_points(crop):
     if crop.kind in ("polygon", "freehand"):
         return crop.points
@@ -158,7 +225,7 @@ def compose(rgba, project, original=False, include_inset=True):
     started = time.perf_counter()
     pixels = rgba if original else processed_source(rgba, project)
     base, valid, bbox, k = make_base(pixels, project.crop, project.output)
-    composition = Composition(base, valid, [], k, bbox)
+    composition = Composition(base, valid, [], k, bbox, rotation_deg=project.output.rotation_deg)
     if original:
         return composition
     width, height = base.shape[1], base.shape[0]
@@ -167,6 +234,8 @@ def compose(rgba, project, original=False, include_inset=True):
         composition.issues.append(Issue("error" if project.style.enabled else "info", "Calibration is unavailable or pending. Physical bars require confirmation; uncalibrated image export is allowed.", "calibration"))
     try:
         prim, rect, length = scale_primitives(project.style, c, k, (width, height), project.output)
+        if project.output.rotation_deg and project.style.anchor != "custom":
+            rect = fit_rotated_anchor(prim, rect, valid)
         composition.primitives.extend(prim)
         composition.scale_rect, composition.scale_length_px = rect, length
         if rect and not contained(rect, valid):
@@ -175,7 +244,7 @@ def compose(rgba, project, original=False, include_inset=True):
             composition.issues.append(Issue("warning", f"Short scale bar: {length:.2f} output pixels.", "scale", rect))
         if project.style.enabled and font_for(project.style, project.output).pixelSize() < 12:
             composition.issues.append(Issue("warning", "Scale text is smaller than 12 output pixels.", "scale", rect))
-        if length and not math.isclose(length * c.usable_x / k, project.style.length_nm, rel_tol=1e-10):
+        if length and not math.isclose(length * rotated_spacing(c, project.output.rotation_deg)[0] / k, project.style.length_nm, rel_tol=1e-10):
             composition.issues.append(Issue("error", "Scale geometry and physical label disagree.", "scale", rect))
     except ValueError as exc:
         composition.issues.append(Issue("error", str(exc), "scale"))
@@ -201,18 +270,17 @@ def compose(rgba, project, original=False, include_inset=True):
         for issue in child.issues:
             if issue.severity != "info":
                 composition.issues.append(Issue(issue.severity, "Inset: " + issue.message, "inset", composition.inset_rect))
-        pts = [to_output(p, bbox, k) for p in roi_points(ins.roi)]
+        pts = [composition.to_output(p) for p in roi_points(ins.roi)]
         if ins.roi.kind in ("circle", "ellipse"):
             a, b, rw, rh = ins.roi.rect
-            composition.primitives.append({"type": "ellipse", "rect": [*to_output([a, b], bbox, k), rw * k, rh * k], "color": ins.border_color, "width": 2., "role": "inset-source-roi"})
-        else:
-            composition.primitives.append({"type": "path", "points": pts, "closed": True, "color": ins.border_color, "width": 2., "role": "inset-source-roi"})
+            pts = [composition.to_output([a + rw * (1 + math.cos(t)) / 2, b + rh * (1 + math.sin(t)) / 2]) for t in np.linspace(0, 2 * math.pi, 129)[:-1]]
+        composition.primitives.append({"type": "path", "points": pts, "closed": True, "color": ins.border_color, "width": 2., "role": "inset-source-roi"})
         composition.primitives.append({"type": "ellipse" if ins.circular else "outline", "rect": composition.inset_rect, "color": ins.border_color, "width": 2., "role": "inset-border"})
     if project.output.export_guides:
         for measure in project.measurements:
-            composition.primitives.append({"type": "path", "points": [to_output(p, bbox, k) for p in measure["points"]], "closed": False, "color": "#37d5ee", "width": 1., "role": "measurement"})
+            composition.primitives.append({"type": "path", "points": [composition.to_output(p) for p in measure["points"]], "closed": False, "color": "#37d5ee", "width": 1., "role": "measurement"})
         for points in project.protected:
-            composition.primitives.append({"type": "path", "points": [to_output(p, bbox, k) for p in points], "closed": True, "color": "#ff5d73", "width": 1., "role": "protected-guide"})
+            composition.primitives.append({"type": "path", "points": [composition.to_output(p) for p in points], "closed": True, "color": "#ff5d73", "width": 1., "role": "protected-guide"})
     _spatial_checks(project, composition, rgba.shape)
     log.debug("Compose %.3fs source=%s output=%sx%s k=%s calibration=%s", time.perf_counter() - started, rgba.shape, width, height, k, c.sx)
     return composition
@@ -225,7 +293,7 @@ def inset_project(project):
     if project.inset.circular and not math.isclose(child.crop.rect[2], child.crop.rect[3], abs_tol=.01):
         raise ValueError("Circular inset requires a square source ROI. Adjust the ROI; sample data is never stretched.")
     child.crop.background = "transparent"
-    child.output = Output(mode="width", width_px=round(project.inset.width), dpi=project.output.dpi)
+    child.output = Output(mode="width", width_px=round(project.inset.width), dpi=project.output.dpi, rotation_deg=project.output.rotation_deg)
     if project.output.mode == "print":
         child.output.mode = "print"
         child.output.width_mm = project.inset.width / project.output.dpi * 25.4
@@ -248,14 +316,14 @@ def _spatial_checks(project, comp, shape):
         cv2.fillPoly(protection, [np.round(points).astype(np.int32)], 1)
         local = protection[y:y2, x:x2].astype(bool)
         kept = retained
-        pts = np.asarray([to_output(point, comp.bbox, comp.k) for point in points])
+        pts = np.asarray([comp.to_output(point) for point in points])
         low, high = pts.min(0), pts.max(0)
         protection_rect = [*low.tolist(), *(high - low).tolist()]
         if int((local & kept).sum()) < int(protection.sum()):
             comp.issues.append(Issue("warning", f"Protected region {i + 1} is touched by the crop boundary.", "protected", protection_rect))
         if project.treatment != "keep" and (protection.astype(bool) & combined).any():
             comp.issues.append(Issue("warning", f"Old-scale treatment overlaps protected region {i + 1}.", "protected", protection_rect))
-        out = resample(protection[y:y2, x:x2], (comp.base.shape[1], comp.base.shape[0]), comp.k, True) > 0
+        out = rotate_sample(protection[y:y2, x:x2], (comp.base.shape[1], comp.base.shape[0]), comp.k, comp.rotation_deg, True) > 0
         annotations = [("scale", comp.scale_rect), ("inset", comp.inset_rect)]
         for primitive in comp.primitives:
             if primitive.get("role") == "panel-label":
@@ -284,10 +352,15 @@ def _spatial_checks(project, comp, shape):
         if project.treatment != "keep" and combined.shape == shape[:2]:
             remains &= ~combined[ay:ay2, ax:ax2]
         if remains.any():
-            comp.issues.append(Issue("warning", "A known old-scale candidate remains. Inspect the line and associated text; detection is not exhaustive.", "old-scale", [*to_output([bx, by], comp.bbox, comp.k), bw * comp.k, bh * comp.k]))
-    comp.issues.append(Issue("info", f"Presentation: 8-bit RGBA; fixed display mapping {project.display_low:g}…{project.display_high:g}. Data TIFF retains source dtype {project.source_dtype}. Transparency={'yes' if (comp.base[..., 3] < 255).any() else 'no'}.", "output"))
-    if project.calibration.usable_x:
-        comp.issues.append(Issue("info", f"Output calibration: sx={project.calibration.usable_x / comp.k:.9g} nm/px; k={comp.k:.9g}. Screen zoom and DPI metadata do not enter sample calibration.", "calibration"))
+            comp.issues.append(Issue("warning", "A known old-scale candidate remains. Inspect the line and associated text; detection is not exhaustive.", "old-scale", comp.output_rect([bx, by, bw, bh])))
+    comp.issues.append(Issue("info", f"Preview: 8-bit RGBA; fixed display mapping {project.display_low:g}…{project.display_high:g}. Same-as-source and data TIFF retain source dtype {project.source_dtype}. Preview transparency={'yes' if (comp.base[..., 3] < 255).any() else 'no'}.", "output"))
+    sx, _ = rotated_spacing(project.calibration, comp.rotation_deg)
+    if sx:
+        comp.issues.append(Issue("info", f"Output calibration: sx={sx / comp.k:.9g} nm/px; k={comp.k:.9g}. Screen zoom and DPI metadata do not enter sample calibration.", "calibration"))
+    if comp.rotation_deg:
+        comp.issues.append(Issue("info", f"Clockwise output rotation: {rotation_angle(comp.rotation_deg):g} degrees. Source coordinates are unchanged.", "output"))
+        if rotation_angle(comp.rotation_deg) % 90 and project.calibration.status == "Confirmed" and sx is None:
+            comp.issues.append(Issue("warning", "Output axis calibration is omitted: a custom angle requires confirmed equal x/y spacing. Source calibration remains in the recipe.", "calibration"))
 
 
 def candidate_masks_local(candidate, shape):
@@ -408,14 +481,16 @@ def data_crop(source, project):
     bbox, k, size = output_geometry(project.crop, source.shape, project.output)
     x, y, x2, y2 = bbox
     crop = source[y:y2, x:x2]
-    if k == 1:
-        return crop.copy(), crop_mask(project.crop, source.shape), k
+    angle = rotation_angle(project.output.rotation_deg)
+    if k == 1 and angle % 90 == 0:
+        turns = -int(angle / 90)
+        return np.rot90(crop, turns).copy(), np.rot90(crop_mask(project.crop, source.shape), turns).copy(), k
     original_dtype = crop.dtype
     working = crop.astype(np.float64) if original_dtype not in (np.uint8, np.uint16, np.int16, np.float32, np.float64) else crop
-    data = resample(working, size, k)
+    data = rotate_sample(working, size, k, angle)
     if data.dtype != original_dtype:
         data = data.astype(original_dtype)
-    return data, resample(crop_mask(project.crop, source.shape).astype(np.uint8), size, k, True).astype(bool), k
+    return data, rotate_sample(crop_mask(project.crop, source.shape).astype(np.uint8), size, k, angle, True).astype(bool), k
 
 
 def export_file(path, source, rgba, project, kind="png", progress=lambda n, s: None):
@@ -425,20 +500,31 @@ def export_file(path, source, rgba, project, kind="png", progress=lambda n, s: N
     errors = [issue.message for issue in comp.issues if issue.severity == "error"]
     if kind != "data-tiff" and errors:
         raise ValueError("Export check failed:\n" + "\n".join(errors))
+    if kind == "source":
+        from .native_export import source_suffix
+        path = Path(path).with_suffix(source_suffix(project))
     path = available_output(path, (project.source_path, project.reference.get("path")))
+    sx, sy = rotated_spacing(project.calibration, project.output.rotation_deg)
+    interpolated = comp.k != 1 or rotation_angle(project.output.rotation_deg) % 90 != 0
     meta = {"software": "MicroScale Editor", "unit": "nm", "status": project.calibration.status,
-            "sx": project.calibration.usable_x / comp.k if project.calibration.usable_x else None,
-            "sy": project.calibration.usable_y / comp.k if project.calibration.usable_y else None,
+            "sx": sx / comp.k if sx else None, "sy": sy / comp.k if sy else None,
+            "rotation_deg_clockwise": rotation_angle(project.output.rotation_deg), "interpolated": interpolated,
+            "source_to_output_edge_matrix": comp.matrix.tolist(),
             "k": comp.k, "source_hash": project.source_hash, "source_dtype": str(source.dtype),
             "display_low": project.display_low, "display_high": project.display_high,
             "scale_length_px": comp.scale_length_px, "scale_length_nm": project.style.length_nm if project.style.enabled else None,
             "warnings": [i.message for i in comp.issues if i.severity == "warning"], "recipe": project.to_dict()}
     outputs = []
     progress(55, "Writing independent output files")
+    if kind == "source":
+        from .native_export import write_native_figure
+        outputs = write_native_figure(path, source, project, comp, meta)
+        progress(100, "Export complete; source file type and bit depth preserved")
+        return outputs
     if kind in ("data-tiff", "tiff"):
         data, valid, k = data_crop(source, project)
         data_path = path if kind == "data-tiff" else available_output(path.with_name(path.stem + "_data.tif"), (project.source_path, project.reference.get("path")))
-        tifffile.imwrite(data_path, data, metadata={"microscale": {**{key: value for key, value in meta.items() if key != "recipe"}, "role": "unaltered data crop" if k == 1 else "resampled data crop"}}, photometric="rgb" if data.ndim == 3 else "minisblack")
+        tifffile.imwrite(data_path, data, metadata={"microscale": {**{key: value for key, value in meta.items() if key != "recipe"}, "role": "resampled data crop" if interpolated else "unaltered data crop"}}, photometric="rgb" if data.ndim == 3 else "minisblack")
         outputs.append(str(data_path))
         validity_path = data_path.with_name(data_path.stem + "_valid-mask.png")
         # data pixels outside an irregular ROI remain in the bbox data file;

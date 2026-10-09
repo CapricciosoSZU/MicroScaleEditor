@@ -15,7 +15,7 @@ def main():
     parser.add_argument("--examples", action="store_true", help="Create and open explicitly synthetic examples")
     parser.add_argument("--recipe", help="Render a saved Project JSON without editor interaction")
     parser.add_argument("--output", help="Recipe output filename")
-    parser.add_argument("--format", choices=["png", "tiff", "data-tiff", "svg"], default="png")
+    parser.add_argument("--format", choices=["source", "png", "tiff", "data-tiff", "svg"], default="source")
     parser.add_argument("--self-test", metavar="FOLDER", help="Run the packaged GUI/OCR/export check and write its report")
     parser.add_argument("--test-images", metavar="FOLDER", action="append", help="Also validate local images recursively during --self-test; repeat for multiple folders; reports remain local")
     args = parser.parse_args()

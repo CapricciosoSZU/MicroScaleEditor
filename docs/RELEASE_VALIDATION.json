@@ -1,8 +1,8 @@
 {
-  "version": "0.1.1",
+  "version": "0.2.0",
   "executable": "MicroScaleEditor.exe",
-  "sha256": "a67355b36fadf2caa37181305af50c5b01f2741aa8d3cefac7f479f1b4f33b8a",
-  "size_bytes": 154188749,
+  "sha256": "076ca4291e64e1eddd402ef182e7ce01dda3ad345360d7f331823d26056b22a1",
+  "size_bytes": 154234266,
   "status": "passed",
   "frozen": true,
   "synthetic_inputs_only": false,
@@ -11,6 +11,7 @@
   "checks": [
     "GUI startup and persistent synthetic examples",
     "Startup centered within usable screen",
+    "Same as source is the default GUI export",
     "Examples outside extraction directory",
     "Bundled local OCR recognizes 50 nm / 250 px",
     "Scale geometry 25 px",
@@ -21,27 +22,37 @@
     "Recovery record",
     "Input unchanged",
     "16-bit TIFF exact crop",
+    "Quarter-turn TIFF preserves exact uint16 samples",
     "Bundled LZW uint8 1-channel exact decode",
     "Bundled LZW uint16 1-channel exact decode",
     "Bundled LZW uint8 4-channel exact decode",
     "Bundled LZW float32 1-channel exact decode",
+    "2x annotated uint16 source-format export retains sample precision",
+    "2x annotated float32 source-format export retains sample precision",
+    "Cropping retains confirmed calibration and scale",
+    "Quarter-turn GUI preview swaps dimensions",
+    "Custom-angle horizontal bar fits rotated crop",
+    "Rotated PNG equals preview",
+    "Rotation saved in project",
+    "Pending scale has actionable visible feedback",
+    "GUI resolution preset doubles image and calibrated bar",
     "All supplied local images passed"
   ],
-  "check_elapsed_seconds": 239.876,
+  "check_elapsed_seconds": 230.163,
   "private_images": {
-    "count": 127,
-    "passed": 127,
+    "count": 129,
+    "passed": 129,
     "compression_counts": {
       "NONE": 65,
-      "LZW": 31,
-      "PNG/JPEG": 31
+      "PNG/JPEG": 33,
+      "LZW": 31
     },
     "dataset_counts": {
-      "1": 69,
+      "1": 71,
       "2": 58
     },
     "dtype_counts": {
-      "uint8": 97,
+      "uint8": 99,
       "float32": 30
     },
     "images_and_filenames_published": false

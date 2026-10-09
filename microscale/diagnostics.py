@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QApplication
 from .gui import MainWindow
 from .image_io import read_source, project_for, display_rgba, qimage_to_array
 from .model import load_project, file_hash, Crop
-from .rendering import compose, export_file
+from .rendering import compose, data_crop, export_file
 from .runtime import frozen, runtime_dir, user_data_dir
 
 
@@ -49,6 +49,7 @@ def run_self_test(app, output_dir, test_images=None):
         available = window.screen().availableGeometry()
         frame = window.frameGeometry()
         check("Startup centered within usable screen", available.contains(frame) and (frame.center() - available.center()).manhattanLength() <= 2)
+        check("Same as source is the default GUI export", window.export_kind.currentText() == "Same as source (original bit depth)")
         example_dir = runtime_dir("examples")
         check("Examples outside extraction directory", str(getattr(sys, "_MEIPASS", "not-frozen")) not in str(example_dir))
         window.load_image(example_dir / "SYNTHETIC_50nm_250px.png")
@@ -96,6 +97,10 @@ def run_self_test(app, output_dir, test_images=None):
         outputs = export_file(output_dir / "native-data.tif", source.pixels, display_rgba(source.pixels, project.display_low, project.display_high), project, "data-tiff")
         data = tifffile.imread(outputs[0])
         check("16-bit TIFF exact crop", data.dtype == np.uint16 and np.array_equal(data, source.pixels[23:173, 17:227]))
+        project.output.rotation_deg = 90
+        rotated_outputs = export_file(output_dir / "quarter-turn-data.tif", source.pixels,
+            display_rgba(source.pixels, project.display_low, project.display_high), project, "data-tiff")
+        check("Quarter-turn TIFF preserves exact uint16 samples", np.array_equal(tifffile.imread(rotated_outputs[0]), np.rot90(data, -1)))
         for dtype, channels, predictor in ((np.uint8, 1, False), (np.uint16, 1, True), (np.uint8, 4, False), (np.float32, 1, True)):
             shape = (64, 96) if channels == 1 else (64, 96, channels)
             rng = np.random.default_rng(251)
@@ -104,7 +109,62 @@ def run_self_test(app, output_dir, test_images=None):
             tifffile.imwrite(compressed, original, compression="lzw", predictor=predictor, photometric="minisblack" if channels == 1 else "rgb")
             decoded = read_source(compressed)
             check(f"Bundled LZW {np.dtype(dtype)} {channels}-channel exact decode", decoded.pixels.dtype == original.dtype and np.array_equal(decoded.pixels, original))
-        window.properties.setCurrentIndex(2)
+        for dtype, suffix in ((np.uint16, ".png"), (np.float32, ".tif")):
+            values = np.arange(120 * 180, dtype=dtype).reshape(120, 180)
+            if dtype == np.float32:
+                values /= np.float32(37.13)
+            path = output_dir / ("synthetic-native-precision" + suffix)
+            if suffix == ".png":
+                import cv2
+                ok, encoded = cv2.imencode(suffix, values)
+                if not ok:
+                    raise OSError("Cannot encode synthetic PNG")
+                encoded.tofile(str(path))
+            else:
+                tifffile.imwrite(path, values)
+            native = read_source(path)
+            recipe = project_for(native)
+            recipe.calibration.propose(.2, .2, "Synthetic verification only", True)
+            recipe.calibration.confirm()
+            recipe.style.enabled = True
+            recipe.style.length_nm = 5
+            recipe.output.scale = 2
+            preview = display_rgba(native.pixels, recipe.display_low, recipe.display_high)
+            outputs = export_file(output_dir / ("native-precision-figure" + suffix), native.pixels, preview, recipe, "source")
+            result = read_source(outputs[0]).pixels
+            expected, _, _ = data_crop(native.pixels, recipe)
+            check(f"2x annotated {np.dtype(dtype)} source-format export retains sample precision", result.dtype == dtype and result.shape == (240, 360) and np.array_equal(result[:100], expected[:100]) and np.unique(result[:100]).size > 256 and not np.array_equal(result, expected))
+        window.canvas_edit("crop-rect", ["rectangle", [100, 100, 700, 600]])
+        settle()
+        check("Cropping retains confirmed calibration and scale", p.calibration.status == "Confirmed" and window.composition.scale_length_px == 25)
+        window.rotate_image(90)
+        settle()
+        check("Quarter-turn GUI preview swaps dimensions", window.result_image.width() == 600 and window.result_image.height() == 700)
+        window.set_rotation(17.5)
+        settle()
+        check("Custom-angle horizontal bar fits rotated crop", window.composition.scale_length_px == 25 and not any(i.severity == "error" for i in window.composition.issues))
+        window.start_export(str(output_dir / "custom-rotation.png"))
+        settle()
+        check("Rotated PNG equals preview", np.array_equal(read_source(output_dir / "custom-rotation.png").pixels, qimage_to_array(window.result_image)))
+        window.save_to(str(output_dir / "rotation-project.json"))
+        settle()
+        check("Rotation saved in project", load_project(output_dir / "rotation-project.json").output.rotation_deg == 17.5)
+        window.canvas_edit("endpoints", [[100., 100.], [350., 100.]])
+        settle()
+        check("Pending scale has actionable visible feedback", window.composition.scale_rect is None and "endpoints changed" in window.scale_state.text() and "endpoints changed" in window.notice.text())
+        window.known_length.setText("50 nm")
+        window.square.setChecked(True)
+        window.endpoint_calibration()
+        window.confirm_calibration()
+        settle()
+        original_font = p.style.font_size
+        original_size = window.result_image.size()
+        window.set_output_resolution(2)
+        settle()
+        check("GUI resolution preset doubles image and calibrated bar", window.composition.scale_length_px == 50 and p.style.font_size == original_font * 2 and window.result_image.size() == original_size * 2 and p.output.scale == 2)
+        window.set_output_resolution(1)
+        settle()
+        window.properties.setCurrentIndex(1)
         window.view_tabs.setCurrentIndex(1)
         window.output_view.fit()
         window.notice.setText("Standalone verification passed. Synthetic input only; original pixels preserved.")
@@ -200,6 +260,11 @@ def validate_external_images(window, settle, input_dir, output_dir):
             outputs = export_file(output_dir / f"image-{index:03d}-crop.tif", source.pixels, doc.rgba, cropped, "data-tiff")
             crop = tifffile.imread(outputs[0])
             require("Native data crop exact", crop.dtype == source.pixels.dtype and np.array_equal(crop, source.pixels[y:y + ch, x:x + cw]))
+            outputs = export_file(output_dir / f"image-{index:03d}-source{path.suffix}", source.pixels, doc.rgba, cropped, "source")
+            figure = read_source(outputs[0]).pixels
+            require("Source-format crop retains file type and bit depth", Path(outputs[0]).suffix == path.suffix.lower() and figure.dtype == source.pixels.dtype and figure.shape == crop.shape)
+            if path.suffix.lower() not in {".jpg", ".jpeg"}:
+                require("Lossless source-format crop retains exact samples", np.array_equal(figure, crop))
             require("Original file unchanged", file_hash(path) == initial_hash)
             record["status"] = "passed"
         except Exception:

@@ -130,9 +130,67 @@ def crop_mask(crop, shape):
     return valid
 
 
+def rotation_angle(angle):
+    angle = float(angle)
+    if not math.isfinite(angle):
+        raise ValueError("Rotation angle must be finite.")
+    angle = (angle + 180.) % 360. - 180.
+    quarter = round(angle / 90.) * 90.
+    return quarter if abs(angle - quarter) < 1e-9 else angle
+
+
+def rotation_frame(width, height, angle):
+    """Clockwise rotation of pixel edges, expanded to contain the entire crop."""
+    angle = rotation_angle(angle)
+    if angle % 90 == 0:
+        c, s = ((1, 0), (0, 1), (-1, 0), (0, -1))[int(angle / 90) % 4]
+    else:
+        c, s = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+    linear = np.array([[c, -s], [s, c]], dtype=float)
+    corners = np.array([[0, 0], [width, 0], [width, height], [0, height]]) @ linear.T
+    low, high = corners.min(0), corners.max(0)
+    size = tuple(int(math.ceil(v - 1e-10)) for v in high - low)
+    return np.column_stack((linear, -low)), size
+
+
+def output_matrix(bbox, k, angle=0):
+    matrix, _ = rotation_frame(bbox[2] - bbox[0], bbox[3] - bbox[1], angle)
+    matrix[:, 2] -= matrix[:, :2] @ np.array(bbox[:2])
+    return matrix * k
+
+
+def transformed_point(point, matrix):
+    return (matrix[:, :2] @ np.asarray(point) + matrix[:, 2]).tolist()
+
+
+def rotated_spacing(calibration, angle):
+    """Only publish axis spacings representable by the diagonal calibration model."""
+    angle = rotation_angle(angle)
+    sx, sy = calibration.usable_x, calibration.usable_y
+    if angle % 180 == 0:
+        return sx, sy
+    if angle % 90 == 0:
+        return sy, sx
+    if sx and sy and math.isclose(sx, sy, rel_tol=1e-10):
+        return sx, sy
+    return None, None
+
+
+def scale_calibration_message(calibration, angle=0):
+    if calibration.endpoints_dirty:
+        return "Scale bar hidden: endpoints changed. In Source, check Known length, click Use endpoints, then Confirm calibration."
+    if calibration.status != "Confirmed":
+        return "Scale bar hidden: calibration is " + calibration.status + ". Review it in Source and click Confirm calibration."
+    if rotated_spacing(calibration, angle)[0] is None:
+        if rotation_angle(angle) % 90:
+            return "Scale bar hidden: a custom angle needs confirmed equal x/y spacing. Review both axes or a justified square-pixel assumption in Source."
+        return "Scale bar hidden: this rotation needs confirmed spacing for the output horizontal direction. Review the source axes in Source."
+    return ""
+
+
 def output_geometry(crop, shape, output):
     x, y, x2, y2 = bounds(crop, shape)
-    width, height = x2 - x, y2 - y
+    _, (width, height) = rotation_frame(x2 - x, y2 - y, output.rotation_deg)
     if output.mode == "print":
         target = positive(output.width_mm, "Panel width") / 25.4 * positive(output.dpi, "DPI")
         target = max(1, round(target))

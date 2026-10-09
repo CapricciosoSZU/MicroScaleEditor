@@ -20,7 +20,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDia
 
 from .canvas import EditorCanvas, ImageView
 from .detection import build_masks, candidate_masks, detect, register
-from .geometry import bounds, calibrate, distance, format_length, normalized_rect, output_geometry, parse_length, positive, suggestions, constrain_rect
+from .geometry import (bounds, calibrate, distance, format_length, normalized_rect, output_geometry,
+    parse_length, positive, suggestions, constrain_rect, rotation_angle, rotated_spacing, scale_calibration_message)
 from .image_io import Source, array_to_qimage, display_rgba, project_for, qimage_to_array, read_source
 from .model import Calibration, Crop, History, Project, Style, atomic_json, file_hash, load_project, relink_source, save_project
 from .rendering import change_view, compose, export_file, inset_project, render_image
@@ -448,6 +449,21 @@ class MainWindow(QMainWindow):
         self.crop_dimensions = QLabel("")
         self.crop_dimensions.setWordWrap(True)
         f.addRow(self.crop_dimensions)
+        rotation = QGroupBox("Image rotation")
+        rotation_layout = QFormLayout(rotation)
+        rotation_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        rotation_layout.addRow(row(self.button("Rotate left 90°", lambda: self.rotate_image(-90)),
+                                   self.button("Rotate right 90°", lambda: self.rotate_image(90))))
+        rotation_layout.addRow(row(self.button("Rotate 180°", lambda: self.rotate_image(180)),
+                                   self.button("Reset rotation", lambda: self.set_rotation(0))))
+        self.rotation_degrees = number(0, -180, 180, 2)
+        self.rotation_degrees.setObjectName("rotationDegrees")
+        rotation_layout.addRow("Angle (° clockwise)", self.rotation_degrees)
+        rotation_layout.addRow(self.button("Apply rotation", lambda: self.set_rotation(self.rotation_degrees.value())))
+        rotation_hint = QLabel("Rotates the cropped output; view it in Output pixel preview. Source editing stays in original coordinates. Custom angles interpolate pixels.")
+        rotation_hint.setWordWrap(True)
+        rotation_layout.addRow(rotation_hint)
+        f.addRow(rotation)
         hint = QLabel("Polygon: click points; Enter/right-click closes. Edit crop: drag corners/vertices or move inside. Ctrl-click adds a vertex; Delete removes it. Freehand closes on release.")
         hint.setWordWrap(True)
         f.addRow(hint)
@@ -473,6 +489,11 @@ class MainWindow(QMainWindow):
 
     def _scale_ui(self):
         f = self.scale_form_layout
+        self.scale_state = QLabel()
+        self.scale_state.setWordWrap(True)
+        self.scale_state.setObjectName("scaleCalibrationStatus")
+        f.addRow(self.scale_state)
+        f.addRow(self.button("Review calibration", lambda: self.properties.setCurrentIndex(0)))
         self.preset = combo(["White", "Black", "White on dark plate"])
         f.addRow("Preset", self.preset)
         f.addRow(self.button("Use preset", self.apply_preset))
@@ -500,6 +521,9 @@ class MainWindow(QMainWindow):
         self.line_pt = number(1, .05, 100)
         f.addRow("Mode", self.output_mode)
         f.addRow("Native uniform factor", self.output_scale)
+        f.addRow("Resolution", row(self.button("1×", lambda: self.set_output_resolution(1)),
+                                    self.button("2×", lambda: self.set_output_resolution(2)),
+                                    self.button("4×", lambda: self.set_output_resolution(4))))
         f.addRow("Custom width (px)", self.output_width)
         f.addRow("Panel width (mm)", self.output_mm)
         f.addRow("DPI", self.output_dpi)
@@ -518,12 +542,12 @@ class MainWindow(QMainWindow):
         self.check_list.setWordWrap(True)
         self.check_list.itemClicked.connect(self.locate_issue)
         f.addRow(self.check_list)
-        self.export_kind = combo(["PNG presentation", "TIFF presentation + data", "TIFF data only", "SVG editable annotations"])
+        self.export_kind = combo(["Same as source (original bit depth)", "PNG presentation", "TIFF presentation + data", "TIFF data only", "SVG editable annotations"])
         f.addRow("Format", self.export_kind)
         f.addRow(self.button("Export…", self.export_dialog))
         f.addRow(self.button("Copy finished image", self.clipboard))
         f.addRow(self.button("View output at 1:1 pixels", self.preview_actual))
-        label = QLabel("PNG: 8-bit presentation with stated display window. Data TIFF: original dtype; irregular ROI gets a validity-mask sidecar. SVG: embedded raster with separate vector objects.")
+        label = QLabel("Default: same file type and bit depth, including the scale bar. 2×/4× enlarge pixels and annotation layout; this resamples, not new specimen detail. Grayscale stays grayscale. Inputs without alpha use white for transparent areas. JPEG is re-encoded at quality 98. PNG presentation is 8-bit; TIFF data only excludes annotations.")
         label.setWordWrap(True)
         f.addRow(label)
 
@@ -641,14 +665,23 @@ class MainWindow(QMainWindow):
             for widget, value in zip(self.inset_roi_fields, p.inset.roi.rect):
                 widget.setValue(value)
             self.output_mode.setCurrentText(p.output.mode)
+            self.rotation_degrees.setValue(rotation_angle(p.output.rotation_deg))
             for widget, value in ((self.output_scale, p.output.scale), (self.output_width, p.output.width_px), (self.output_mm, p.output.width_mm), (self.output_dpi, p.output.dpi), (self.font_pt, p.output.font_pt), (self.line_pt, p.output.line_pt), (self.panel_x, p.output.label_x), (self.panel_y, p.output.label_y)):
                 widget.setValue(value)
             self.panel_label.setText(p.output.label)
             self.export_guides.setChecked(p.output.export_guides)
             self.suggestions.clear()
-            if c.usable_x:
-                box = bounds(p.crop, p.source_shape)
-                self.suggestions.addItems([format_length(value) for value in suggestions((box[2] - box[0]) * c.usable_x)])
+            rotated_sx, _ = rotated_spacing(c, p.output.rotation_deg)
+            if rotated_sx:
+                _, k, size = output_geometry(p.crop, p.source_shape, p.output)
+                self.suggestions.addItems([format_length(value) for value in suggestions(size[0] / k * rotated_sx)])
+            scale_message = scale_calibration_message(c, p.output.rotation_deg)
+            self.scale_state.setText(scale_message or "Calibration confirmed for the output horizontal direction. Apply the style to draw the bar.")
+            self.scale_state.setStyleSheet("color: #ffbc75" if scale_message else "color: #9be1d7")
+            if scale_message and (p.style.enabled or self.notice.text().startswith("Calibration confirmed")):
+                self.notify(scale_message, True)
+            elif not scale_message and self.notice.text().startswith("Scale bar hidden:"):
+                self.notify("Calibration confirmed for the output horizontal direction. Apply the style to draw the bar.")
             self.update_tool_geometry()
         finally:
             self.syncing = False
@@ -718,7 +751,7 @@ class MainWindow(QMainWindow):
             sx, sy = p.calibration.usable_x, p.calibration.usable_y
             physical = f"{(box[2] - box[0]) * sx:g} nm" if sx else "x unknown"
             physical += " × " + (f"{(box[3] - box[1]) * sy:g} nm" if sy else "y unknown")
-            self.crop_dimensions.setText(f"Output {size[0]} × {size[1]} px\nRetained bbox: {physical}\nUniform sampling factor {k:g}")
+            self.crop_dimensions.setText(f"Output {size[0]} × {size[1]} px\nRetained source bbox: {physical}\nUniform sampling factor {k:g} · rotation {rotation_angle(p.output.rotation_deg):g}°")
             view = self.view_tabs.currentWidget()
             zoom = view.transform().m11() * view.viewport().devicePixelRatioF() * 100
             self.statusBar().showMessage(f"Source {p.source_shape[1]}×{p.source_shape[0]}  |  Output {size[0]}×{size[1]}  |  View {zoom:.0f}%  |  {p.calibration.status}  |  sx {p.calibration.sx} nm/px")
@@ -791,6 +824,8 @@ class MainWindow(QMainWindow):
         self.commit()
 
     def threshold_change(self):
+        if self.syncing:
+            return
         p = self.require_document()
         p.calibration.conflict_threshold = self.conflict_threshold.value() / 100
         if p.calibration.conflicts():
@@ -801,7 +836,12 @@ class MainWindow(QMainWindow):
         p = self.require_document()
         p.calibration.confirm(resolve=self.resolve_conflict.isChecked())
         self.commit()
+        if self.tool.currentText() == "Endpoints":
+            self.tool.setCurrentText("Pan")
         self.notify("Calibration confirmed and saved in project state. Style edits do not require reconfirmation.")
+        message = scale_calibration_message(p.calibration, p.output.rotation_deg)
+        if p.style.enabled and message:
+            self.notify(message, True)
 
     def selected_candidate(self):
         p = self.require_document()
@@ -949,6 +989,21 @@ class MainWindow(QMainWindow):
         p.crop.background = value
         self.commit()
 
+    def rotate_image(self, delta):
+        self.set_rotation(self.require_document().output.rotation_deg + delta)
+
+    def set_rotation(self, angle):
+        p = self.require_document()
+        output = deepcopy(p.output)
+        output.rotation_deg = rotation_angle(angle)
+        output_geometry(p.crop, p.source_shape, output)
+        p.output = output
+        self.needs_fit = True
+        self.commit()
+        self.view_tabs.setCurrentIndex(1)
+        message = scale_calibration_message(p.calibration, output.rotation_deg)
+        self.notify(message if p.style.enabled and message else f"Output rotation: {output.rotation_deg:g}° clockwise. Original pixels and source calibration are unchanged.", bool(p.style.enabled and message))
+
     def canvas_edit(self, kind, value):
         try:
             p = self.require_document()
@@ -966,8 +1021,12 @@ class MainWindow(QMainWindow):
                 box = bounds(p.crop, p.source_shape)
                 p.crop.rect = [box[0], box[1], box[2] - box[0], box[3] - box[1]]
             elif kind == "endpoints":
+                if np.allclose(p.calibration.endpoints, value, rtol=0, atol=1e-9):
+                    return
+                draft_length, draft_square = self.known_length.text(), self.square.isChecked()
                 p.calibration.endpoints = value
                 p.calibration.status = "Pending"
+                p.calibration.endpoints_dirty = True
             elif kind == "mask":
                 p.masks.append(value)
                 self.invalidate_solid_confirmation(p)
@@ -991,6 +1050,10 @@ class MainWindow(QMainWindow):
             elif kind == "inset-roi":
                 p.inset.roi = value
             self.commit()
+            if kind == "endpoints":
+                self.known_length.setText(draft_length)
+                self.square.setChecked(draft_square)
+                self.notify(scale_calibration_message(p.calibration, p.output.rotation_deg), True)
         except Exception as exc:
             log.exception("Canvas edit failed")
             self.notify(str(exc), True)
@@ -1038,6 +1101,10 @@ class MainWindow(QMainWindow):
     def apply_style(self):
         self.require_document().style = self.scale_form.value()
         self.commit()
+        p = self.document.project
+        message = scale_calibration_message(p.calibration, p.output.rotation_deg)
+        if p.style.enabled and message:
+            self.notify(message, True)
 
     def apply_preset(self):
         p = self.require_document()
@@ -1117,6 +1184,30 @@ class MainWindow(QMainWindow):
         p.output = output
         self.commit()
 
+    def set_output_resolution(self, factor):
+        p = self.require_document()
+        output = deepcopy(p.output)
+        output.mode, output.scale = "native", factor
+        _, old_k, _ = output_geometry(p.crop, p.source_shape, p.output)
+        _, new_k, size = output_geometry(p.crop, p.source_shape, output)
+        ratio = new_k / old_k
+        for style in (p.style, p.inset.style):
+            if p.output.mode == "print":
+                style.font_size = p.output.font_pt / 72 * p.output.dpi
+                style.thickness = p.output.line_pt / 72 * p.output.dpi
+            for key in ("font_size", "thickness", "gap", "margin", "x", "y"):
+                setattr(style, key, getattr(style, key) * ratio)
+        p.inset.x *= ratio
+        p.inset.y *= ratio
+        p.inset.width *= ratio
+        output.label_x *= ratio
+        output.label_y *= ratio
+        p.output = output
+        self.needs_fit = True
+        self.commit()
+        self.view_tabs.setCurrentIndex(1)
+        self.notify(f"Output set to {size[0]} × {size[1]} pixels ({factor:g}×). Annotation layout scaled with the image. Choose Export to save.")
+
     def populate_checks(self):
         self.check_list.clear()
         if not self.composition:
@@ -1145,7 +1236,8 @@ class MainWindow(QMainWindow):
 
     def export_dialog(self, inset=False):
         p = self.require_document()
-        kinds = [("png", ".png"), ("tiff", ".tif"), ("data-tiff", ".tif"), ("svg", ".svg")]
+        from .native_export import source_suffix
+        kinds = [("source", source_suffix(p)), ("png", ".png"), ("tiff", ".tif"), ("data-tiff", ".tif"), ("svg", ".svg")]
         kind, suffix = kinds[self.export_kind.currentIndex()]
         path, _ = QFileDialog.getSaveFileName(self, "Export independent result", str(Path(p.source_path).with_name(Path(p.source_path).stem + ("_inset" if inset else "_edited") + suffix)), f"Output (*{suffix})")
         if path:

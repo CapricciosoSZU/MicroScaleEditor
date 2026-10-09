@@ -2,7 +2,7 @@
 
 [English](USER_GUIDE.md) · [简体中文（zh-CN）](USER_GUIDE.zh-CN.md) · [Project home](../README.md) · [Windows download](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest)
 
-Applies to **v0.1.1**. Manual revised **2026-10-09**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
+Applies to **v0.2.0**. Manual revised **2026-10-09**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
 
 MicroScale Editor prepares calibrated SEM/TEM real-space figures. It keeps original image arrays read-only and records cropping, annotation treatment, calibration, and styling separately. Work stays on your computer.
 
@@ -45,7 +45,7 @@ Download and run `MicroScaleEditor.exe`. No separate Python installation is need
 
 **Open image…** accepts PNG, JPEG, and supported single-page TIFF files, including LZW-compressed TIFF. To import several files in the same dialog, use **Ctrl+click**, **Shift+click**, or **Ctrl+A**. Imported images appear in the left-hand list. Click a list item to work on that image.
 
-Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.1.1. Large groups retain their full source arrays in memory; use smaller groups if needed.
+Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.0. Large groups retain their full source arrays in memory; use smaller groups if needed.
 
 | Area | Purpose |
 |---|---|
@@ -57,13 +57,13 @@ Each image has its own calibration and edits. Importing a group does not calibra
 | **Scale bar** | New bar length, appearance, and placement |
 | **Export** | Output dimensions, checks, format, and clipboard |
 
-![MicroScale Editor showing its Scale bar controls on a SYNTHETIC example](images/editor.png)
+![MicroScale Editor showing crop and rotation controls on a SYNTHETIC example](images/editor.png)
 
 *Interface example using synthetic data; this is not a specimen image.*
 
 Scroll inside the right-hand panel to reach controls below the visible area. Click collapsed sections such as **Old scale detection and mask tools** to expand them.
 
-**Apply fields before moving on.** Many forms apply only when you click their corresponding **Use…** or **Apply…** button. In v0.1.1, a canvas edit or another committed operation can reload unapplied values. Place endpoints before entering their known length, and choose a preset before editing the new bar's length and style.
+**Apply fields before moving on.** Many forms apply only when you click their corresponding **Use…** or **Apply…** button. A committed operation can reload unapplied values. Endpoint dragging now preserves the draft known length, but checking that length after placing the endpoints remains good practice. Choose a preset before editing the new bar's length and style.
 
 <a id="three-input-workflows"></a>
 ## 3. Calibrate your image
@@ -105,6 +105,8 @@ Square pixels are an assumption about specimen sampling, not a claim based on th
 Use the **bar itself**, not the width of its text or background plate. For a solid bar, use its outer edges. For a ruler with end ticks, use the centerlines of the two ticks defining the labeled span. If `500 nm` describes the whole ruler, measure that whole span, not one tick interval. For antialiased edges, inspect the boundary at approximately half the local contrast.
 
 Changing endpoints makes the calibration pending again. Re-enter/check **Known length**, click **Use endpoints**, and confirm again after any correction.
+
+After confirmation, the endpoint tool switches to **Pan** to prevent accidental endpoint edits. Cropping alone preserves confirmed calibration. The **Scale bar** tab shows a live calibration message; **Review calibration** opens the Source tab if a bar is hidden. An endpoint change must be applied with **Use endpoints** before it can be confirmed again.
 
 ### 3.3 Method B — use detection and OCR as a starting point
 
@@ -198,6 +200,22 @@ For polygon/freehand crops, drag vertices to edit them, Ctrl+click to insert a v
 
 Use the wheel to zoom, middle-drag or **Pan** to move, **Fit** to see the full view, and **100%** to inspect pixels. Zoom changes the view only. Crop coordinates remain source pixels, while bar placement uses output pixels.
 
+<a id="image-rotation"></a>
+### Rotate the output image
+
+1. Open **Crop → Image rotation**.
+2. Use **Rotate left 90°**, **Rotate right 90°**, or **Rotate 180°** for a turn relative to the current orientation.
+3. For a custom orientation, enter **Angle (° clockwise)** between −180 and 180, then click **Apply rotation**. Positive values rotate clockwise; negative values rotate counterclockwise. This field sets the total angle, rather than adding a turn.
+4. Inspect **Output pixel preview**, which opens automatically. **Reset rotation** returns to 0°. Undo/redo, project saves, PNG/TIFF/SVG exports, and the clipboard retain the selected angle.
+
+Rotation applies to the cropped output before new bars, labels, and inset panels are laid out. The canvas expands to contain the whole rotated crop; outside pixels use **Outside shape**. New scale bars stay horizontal. Anchored bars are moved into the valid rotated region when they fit; custom positions remain under your control. The inset sample follows the main rotation, with its own horizontal bar.
+
+**Edit • source coordinates** continues to show the original coordinate orientation for calibration, crop, mask, and ROI editing. Use **Output pixel preview** to see the final rotated image. Changing the output width sizes the expanded rotated canvas. Source arrays and files are unchanged.
+
+At native 1×, quarter turns are exact pixel permutations; custom angles interpolate pixels, including in data TIFFs. Rotation, interpolation, and the source-to-output transform are recorded in export sidecars. A validity mask identifies the retained region.
+
+A 90°/270° turn exchanges the horizontal and vertical sampling directions. If only source x is calibrated, the rotated horizontal direction is unknown and its bar is hidden. Custom-angle physical bars and output axis metadata require confirmed equal x/y spacing; use a justified square-pixel assumption or independently established equal values. With unequal or missing spacing, you can rotate the image, but physical bars must be disabled for presentation export. The app does not invent the missing calibration.
+
 <a id="existing-annotations-and-masks"></a>
 ## 6. Handle an existing scale bar
 
@@ -251,26 +269,29 @@ Display contrast is controlled under **Source → Display mapping → Low / high
 
 ### 9.1 Set size, check, and save
 
-1. Open **Export** and choose **Mode**: `native` uses **Native uniform factor** (`1` for native sampling); `width` uses **Custom width (px)** with proportional height; `print` uses **Panel width (mm)**, **DPI**, and **Print font / bar (pt)**.
+1. Open **Export**. Under **Resolution**, click **2×** or **4×** for a larger image, or **1×** for native sampling. These buttons immediately scale the image, scale-bar font/thickness/margins, and inset layout together. For a specific size, choose **Mode**: `native` uses **Native uniform factor**; `width` uses **Custom width (px)** with proportional height; `print` uses **Panel width (mm)**, **DPI**, and **Print font / bar (pt)**.
 2. Set **Panel label** and its position if wanted. Click **Apply output layout**.
 3. Inspect **Output pixel preview**, optionally using **View output at 1:1 pixels**.
 4. Click **Export check / locate**. Click issues with a location to inspect them. Resolve errors before presentation export; warnings are advisory and require your judgment.
-5. Choose **Format**, click **Export…**, and select the destination. Wait for the **Exported:** message.
+5. Keep the default **Format → Same as source (original bit depth)** to retain the input file type and sample precision with the new scale bar. Click **Export…**, select the destination, and wait for the **Exported:** message.
 
-Changing output size recalculates the bar from physical calibration. It does not create additional specimen resolution. Export size is independent of screen zoom. Independent horizontal/vertical stretching is unavailable.
+Changing output size recalculates the bar from physical calibration. The 2×/4× buttons rescale the existing annotation layout; entering a factor or width manually keeps pixel-based style settings fixed, so review text and margins afterward. The initial sampling is 1×. A 2048 × 2048 image becomes 4096 × 4096 at 2× or 8192 × 8192 at 4×; this interpolates existing samples and does not create additional specimen detail. Export size is independent of screen zoom. Independent horizontal/vertical stretching is unavailable.
 
 ### 9.2 Choose the appropriate format
 
 | **Format** option | Result |
 |---|---|
+| **Same as source (original bit depth)** — default | Annotated TIFF, PNG, or JPEG matching the source file type, dtype/bit depth, and channel count; supports uint16 PNG/TIFF and float32 TIFF |
 | **PNG presentation** | 8-bit RGBA figure with the recorded display mapping and annotations; transparency supported |
 | **TIFF presentation + data** | 8-bit presentation TIFF plus a separate original-dtype `_data.tif` and validity mask |
-| **TIFF data only** | Source-dtype crop without burned-in treatment or new annotations; exact source values at native 1× sampling |
+| **TIFF data only** | Source-dtype crop without burned-in treatment or new annotations; exact source values at native 1× with quarter-turn rotation only |
 | **SVG editable annotations** | Embedded raster image plus separately editable bar, tick, label, and inset objects; the microscopy pixels remain raster |
 
-Every export has a JSON sidecar recording calibration, source hash, display window, transform, and recipe. Data TIFF exports also write a `_valid-mask.png`: for irregular crops, data outside the retained shape remains in the bounding rectangle, and the mask identifies the valid region. Keep these companion files with the data.
+**Same as source** renders directly from source samples. At native 1× with quarter turns, TIFF/PNG values outside annotations and treatment remain exact. Enlarging or rotating by a custom angle interpolates at the original dtype. The display window maps annotation colors into source values; it is not baked into specimen pixels. External viewers may display scientific TIFF contrast differently. Grayscale inputs stay grayscale, so colored annotations become gray. RGBA inputs retain alpha; inputs without alpha use white outside an irregular crop when `transparent` is selected. Choose **PNG presentation** when you need an 8-bit color/transparent figure matching the display mapping. TIFF uses lossless Deflate; PNG is lossless; JPEG is re-encoded at quality 98 and remains lossy. Original vendor metadata and compression settings are not copied wholesale.
 
-At non-native output sizes, data TIFFs are resampled and that fact is recorded. Use `native` with factor `1` for exact source-value crops. **TIFF data only** does not burn a visible scale bar into the data and bypasses presentation-annotation checks. If you want a visible bar, use a presentation format.
+Every export has a JSON sidecar recording calibration, source hash, display window, transform, and recipe. Source-format figures and data TIFFs also write a `_valid-mask.png`. For data TIFFs, pixels outside an irregular crop remain in the bounding rectangle, and the mask identifies the valid region. Keep these companion files with the data. Annotated outputs contain deliberately changed pixels; use **TIFF data only** for source values without treatment or new annotations.
+
+At non-native output sizes or custom rotation angles, data TIFFs are resampled and that fact is recorded. Use `native` with factor `1` and a multiple of 90° for exact source-value crops. **TIFF data only** does not burn a visible scale bar into the data and bypasses presentation-annotation checks. If you want a visible bar, use a presentation format.
 
 **Copy finished image** copies the rendered presentation at output resolution, regardless of view zoom. It applies presentation export checks. Input images cannot be overwritten; existing output names receive numbered suffixes. Unicode and space-containing paths are supported.
 
@@ -295,7 +316,7 @@ For source users, a saved recipe can be replayed in a separate process:
 .\.venv\Scripts\python.exe -m microscale --recipe examples\SYNTHETIC_demo.micro.json --output replay.png --format png
 ```
 
-See [Windows packaging](../PACKAGING.md) for EXE command-line usage and diagnostics.
+Omitting `--format` now selects `source`; an explicit `--format png` produces the 8-bit presentation. See [Windows packaging](../PACKAGING.md) for EXE command-line usage and diagnostics.
 
 <a id="shortcuts"></a>
 ## 11. Keyboard and mouse shortcuts
@@ -323,7 +344,7 @@ Canvas shortcuts require canvas focus; they do not apply while typing in a form 
 
 | Symptom | What to check |
 |---|---|
-| No new bar appears | Confirm horizontal calibration; check **Draw a physical scale bar**; click **Apply style / length**; use a contrasting color and inspect export issues |
+| No new bar appears | Read the live message above the scale controls and use **Review calibration**; confirm spacing for the rotated horizontal direction; check **Draw a physical scale bar**; click **Apply style / length**; use a contrasting color and inspect export issues |
 | Calibration is still **Pending** | Click **Use endpoints** or **Use manual calibration**, review evidence, then **Confirm calibration**; resolve a reported evidence conflict if needed |
 | “An oblique segment…” error | A near-horizontal drag may leave different y values. Make them equal for a horizontal bar; use square pixels only when justified |
 | Known length or a style field resets | Finish endpoint dragging or choosing a preset first, then enter values and click the corresponding **Use / Apply** button before another operation |
@@ -332,11 +353,11 @@ Canvas shortcuts require canvas focus; they do not apply while typing in a form 
 | The old bar remains | A new bar does not erase existing pixels. Review the old-annotation treatment and include both its line and text |
 | Dragging seems ineffective | Switch from **Output pixel preview** to **Edit • source coordinates**, choose the intended tool, and apply pending form values |
 | A float/16-bit TIFF looks dark or low contrast | Review **Source → Display mapping**. Use data TIFF export to preserve the original values rather than relying on the 8-bit preview |
-| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the v0.1.1 EXE. For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
+| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.0). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
 | Reference transfer is disabled or rejected | Verify actual matching content and registration; review point pairs/overlap. Unsupported distortion or a different field of view cannot be fixed by matching filenames |
-| An exported TIFF has no visible bar | **TIFF data only** intentionally excludes annotations. Choose **TIFF presentation + data**, PNG, or SVG for the figure |
+| An exported TIFF has no visible bar | **TIFF data only** intentionally excludes annotations. Choose the default **Same as source (original bit depth)** for a source-precision TIFF with a bar, or another presentation format |
 | Opening many files uses too much memory | Work in smaller groups; all imported sources retain full-resolution arrays. There is no batch export queue |
-| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.1.1. Centering happens on initial show, not after every manual move |
+| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.0. Centering happens on initial show, not after every manual move |
 
 <a id="scope-and-help"></a>
 ## 13. Supported scope and further help
