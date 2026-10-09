@@ -4,7 +4,7 @@
 
 Crop images, review calibration evidence, edit scale-bar annotations, create linked insets, and export presentation figures alongside preserved scientific data. The interface is English. Processing stays local, with no account, cloud service, or GPU required.
 
-[Download for Windows](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest) · [User guide](docs/USER_GUIDE.md) · [Build instructions](PACKAGING.md) · [Validation](VALIDATION.md)
+[Download for Windows](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest) · [English manual](docs/USER_GUIDE.md) · [简体中文手册（zh-CN）](docs/USER_GUIDE.zh-CN.md) · [Build instructions](PACKAGING.md) · [Validation](VALIDATION.md)
 
 ![Packaged MicroScale Editor running on a synthetic example](docs/images/editor.png)
 
@@ -34,15 +34,30 @@ The portable Windows x64 release has no installer or automatic updater. Logs, ge
 
 ### A simple scale-bar workflow
 
-For an image with a known **50 nm / 250 px** bar:
+For an image with a readable existing scale bar:
 
-1. Open it and select **Source → Old scale detection and mask tools → Detect + OCR**.
-2. Select a candidate and inspect its endpoints, number, and unit. Correct them manually when needed.
-3. Use the endpoints, explicitly confirm any square-pixel assumption, and confirm calibration.
-4. Choose how to treat the old annotation. A plate covers pixels; it cannot recover hidden specimen information.
-5. Enable the new bar, enter `5 nm`, and apply the style: **25 px** at native sampling, **50 px** at 2× output.
+1. Open it. In **Source** and **Edit • source coordinates**, click **Pick endpoints** and drag from one end of the existing bar to the other.
+2. Refine the endpoints; for a horizontal bar, make their y values equal. **Then** enter the existing label in **Known length**, including the unit. Select **Assume square pixels** only when justified.
+3. Click **Use endpoints**, review the spacing, then **Confirm calibration**.
+4. Open **Scale bar**, choose a **Preset**, and click **Use preset**. Check **Draw a physical scale bar**, enter the desired **Physical length**, choose **Position**, and click **Apply style / length**.
+5. To move the bar and label together, click **Drag group** and drag in the edit view. Review any old annotation, inspect **Output pixel preview**, then run **Export → Export check / locate** and export.
 
-See the [user guide](docs/USER_GUIDE.md) for clean-source, annotated-source, and paired-reference workflows.
+Example only: an existing **50 nm / 250 px** bar establishes **0.2 nm/px**. A new **5 nm** bar is then **25 px** at native sampling or **50 px** at 2× output. **Known length** describes the existing reference; **Physical length** controls the new bar.
+
+### Manuals / 使用手册
+
+Both manuals cover the same v0.1.1 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
+
+两份手册适用于 v0.1.1，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
+
+| Task / 操作 | English | 简体中文 |
+|---|---|---|
+| Complete manual / 完整手册 | [Read](docs/USER_GUIDE.md) | [阅读](docs/USER_GUIDE.zh-CN.md) |
+| Calibration / 校准 | [Step by step](docs/USER_GUIDE.md#three-input-workflows) | [操作步骤](docs/USER_GUIDE.zh-CN.md#three-input-workflows) |
+| Draw a scale bar / 绘制比例尺 | [Step by step](docs/USER_GUIDE.md#scale-bar-styling) | [操作步骤](docs/USER_GUIDE.zh-CN.md#scale-bar-styling) |
+| Troubleshooting / 常见问题 | [Find a fix](docs/USER_GUIDE.md#troubleshooting) | [排查问题](docs/USER_GUIDE.zh-CN.md#troubleshooting) |
+
+The manuals were rewritten on **2026-10-09**. Use these repository links for the revised text; the original v0.1.1 application ZIP contains the earlier English guide.
 
 ## Export formats
 

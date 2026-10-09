@@ -2,6 +2,19 @@
 
 Fixes LZW-compressed TIFF loading and centers the editor on startup.
 
+## Updated manuals / 更新后的使用手册
+
+The user manual was rewritten in English and Simplified Chinese on **2026-10-09**, with step-by-step calibration and scale-bar instructions, matching English button names, export guidance, and troubleshooting.
+
+使用手册已于 **2026-10-09** 重写为英文和简体中文，提供校准、绘制比例尺、导出和常见问题的操作步骤。中文保留英文按钮名称，便于对照软件界面。
+
+- [English manual](https://github.com/CapricciosoSZU/MicroScaleEditor/blob/codex/initial-release/docs/USER_GUIDE.md)
+- [简体中文手册（zh-CN）](https://github.com/CapricciosoSZU/MicroScaleEditor/blob/codex/initial-release/docs/USER_GUIDE.zh-CN.md)
+
+This is a documentation update for v0.1.1. The EXE and original application ZIP are unchanged; that ZIP contains the earlier English guide. Use the links above for the revised manuals.
+
+本次为 v0.1.1 的文档更新，EXE 和原应用 ZIP 未替换；原 ZIP 内仍是早期英文指南，请通过以上链接阅读新版双语手册。
+
 ## Fixes and improvements
 
 - Bundles imagecodecs and its native decoder modules. LZW TIFFs open without installing anything separately.
