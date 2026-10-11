@@ -1,8 +1,8 @@
 {
-  "version": "0.2.2",
+  "version": "0.2.3",
   "executable": "MicroScaleEditor.exe",
-  "sha256": "f7dbaaebe67dd2955df2616973a067749339d33ff4fdd31345bc924053b2e4de",
-  "size_bytes": 154241291,
+  "sha256": "5625b4ea50d8d40d8b71700e837c9d8f7c5f66153d73b06cbeee9ef18427cdeb",
+  "size_bytes": 154244116,
   "status": "passed",
   "frozen": true,
   "synthetic_inputs_only": false,
@@ -13,6 +13,8 @@
     "Startup centered within usable screen",
     "Same as source is the default GUI export",
     "Velox-style is the default for new images",
+    "Shift drag creates horizontal source endpoints",
+    "Shift endpoint edit still requires calibration review",
     "Examples outside extraction directory",
     "Bundled local OCR recognizes 50 nm / 250 px",
     "Scale geometry 25 px",
@@ -42,7 +44,7 @@
     "GUI resolution preset doubles image and calibrated bar",
     "All supplied local images passed"
   ],
-  "check_elapsed_seconds": 274.099,
+  "check_elapsed_seconds": 242.983,
   "private_images": {
     "count": 130,
     "passed": 130,

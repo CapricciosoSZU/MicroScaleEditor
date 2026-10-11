@@ -117,6 +117,7 @@ class EditorCanvas(ImageView):
         self.draft = None
         self.points = []
         self.drag_target = None
+        self.endpoint_pointer = None
         self.selected_vertex = None
 
     def set_context(self, project, composition, source_image, result_image, mask_image=None, fit=False):
@@ -138,6 +139,8 @@ class EditorCanvas(ImageView):
         self.points = []
         self.start = None
         self.draft = None
+        self.drag_target = None
+        self.endpoint_pointer = None
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag if mode == "Pan" else QGraphicsView.DragMode.NoDrag)
         self.viewport().update()
 
@@ -214,6 +217,7 @@ class EditorCanvas(ImageView):
             else:
                 self.draft = [point, point]
                 self.drag_target = ("endpoint", 1)
+            self.update_endpoint(point, event.modifiers())
         elif self.mode in ("Mask brush", "Mask erase", "Crop freehand"):
             self.points = [point]
         self.viewport().update()
@@ -248,7 +252,7 @@ class EditorCanvas(ImageView):
                 self.draft.rect = [value.rect[0] + dx, value.rect[1] + dy, *value.rect[2:]]
                 self.draft.points = [[p[0] + dx, p[1] + dy] for p in value.points]
             elif kind == "endpoint":
-                self.draft[value] = point
+                self.update_endpoint(point, event.modifiers())
             else:
                 self.draft = point
         elif self.mode in ("Mask brush", "Mask erase", "Crop freehand"):
@@ -277,6 +281,7 @@ class EditorCanvas(ImageView):
                 else:
                     self.message.emit("Invalid polygon: move or delete a crossing vertex.")
             elif kind == "endpoint":
+                self.update_endpoint(point, event.modifiers())
                 self.edited.emit("endpoints", self.draft)
             elif kind in ("scale", "inset"):
                 end, start = self.composition.to_output(point), self.composition.to_output(self.start)
@@ -311,9 +316,19 @@ class EditorCanvas(ImageView):
                 x, y, w, h = self.draft
                 self.edited.emit("detect-region", [x, y, x + w, y + h])
         self.start, self.draft, self.drag_target = None, None, None
+        self.endpoint_pointer = None
         if self.mode not in ("Crop polygon", "Mask polygon", "Protect polygon"):
             self.points = []
         self.viewport().update()
+
+    def update_endpoint(self, point, modifiers):
+        """Keep the other endpoint fixed; constrain in source coordinates."""
+        self.endpoint_pointer = list(point)
+        index = self.drag_target[1]
+        point = list(point)
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            point[1] = self.draft[1 - index][1]
+        self.draft[index] = point
 
     def finish_polygon(self):
         points = self.points
@@ -340,10 +355,15 @@ class EditorCanvas(ImageView):
             super().mouseDoubleClickEvent(event)
 
     def keyPressEvent(self, event):
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.points:
+        if event.key() == Qt.Key.Key_Shift and self.start is not None and self.endpoint_pointer is not None:
+            self.update_endpoint(self.endpoint_pointer, Qt.KeyboardModifier.ShiftModifier)
+            self.viewport().update()
+            event.accept()
+        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.points:
             self.finish_polygon()
         elif event.key() == Qt.Key.Key_Escape:
             self.points, self.start, self.draft = [], None, None
+            self.drag_target, self.endpoint_pointer = None, None
             self.viewport().update()
         elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace) and self.project and self.selected_vertex is not None and self.project.crop.kind in ("polygon", "freehand"):
             crop = deepcopy(self.project.crop)
@@ -358,6 +378,14 @@ class EditorCanvas(ImageView):
             self.edited.emit("scale-position", [self.composition.scale_rect[0] + dx, self.composition.scale_rect[1] + dy])
         else:
             super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_Shift and self.start is not None and self.endpoint_pointer is not None:
+            self.update_endpoint(self.endpoint_pointer, Qt.KeyboardModifier.NoModifier)
+            self.viewport().update()
+            event.accept()
+        else:
+            super().keyReleaseEvent(event)
 
     def drawForeground(self, painter, rect):
         if not self.project or self.before:

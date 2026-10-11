@@ -582,3 +582,98 @@ def test_legacy_below_template_applies_above_in_both_previews(window, examples, 
     assert label["y"] < bar["rect"][1]
     for item in (window.canvas.result_item, window.output_view.image_item):
         np.testing.assert_array_equal(qimage_to_array(item.pixmap().toImage()), qimage_to_array(window.result_image))
+
+
+def endpoint_mouse_move(canvas, point, modifiers=Qt.KeyboardModifier.NoModifier):
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QMouseEvent
+    pos = canvas.mapFromScene(QPointF(*point))
+    event = QMouseEvent(QEvent.Type.MouseMove, QPointF(pos), QPointF(canvas.viewport().mapToGlobal(pos)),
+                       Qt.MouseButton.NoButton, Qt.MouseButton.LeftButton, modifiers)
+    QApplication.sendEvent(canvas.viewport(), event)
+
+
+@pytest.mark.parametrize("zoom", [.75, 2.0])
+def test_shift_draws_horizontal_calibration_at_any_zoom(window, examples, tmp_path, zoom):
+    open_clean(window, examples)
+    window.tool.setCurrentText("Endpoints")
+    window.canvas.scale(zoom, zoom)
+    window.known_length.setText("50 nm")
+    window.square.setChecked(False)
+    canvas = window.canvas
+    a, b = [200, 250], [430, 310]
+    start = canvas.mapFromScene(QPointF(*a))
+    end = canvas.mapFromScene(QPointF(*b))
+    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, start)
+    endpoint_mouse_move(canvas, b, Qt.KeyboardModifier.ShiftModifier)
+    assert canvas.draft[0][1] == canvas.draft[1][1]
+    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, end)
+    settled(window)
+    p = window.document.project
+    assert p.calibration.endpoints[0][1] == p.calibration.endpoints[1][1]
+    assert p.calibration.status == "Pending"
+    assert window.known_length.text() == "50 nm" and not window.square.isChecked()
+    x1, _, x2, _ = [field.value() for field in window.endpoint_fields]
+    window.endpoint_calibration()
+    assert p.calibration.sx == pytest.approx(50 / abs(x2 - x1))
+    assert p.calibration.sy is None
+    window.confirm_calibration()
+    settled(window)
+    assert p.calibration.status == "Confirmed"
+    window.save_to(str(tmp_path / "horizontal.json"))
+    settled(window)
+    assert load_project(tmp_path / "horizontal.json").calibration == p.calibration
+
+
+@pytest.mark.parametrize("index", [0, 1])
+def test_shift_moves_either_endpoint_around_fixed_opposite(window, examples, index):
+    open_clean(window, examples)
+    original = [[150., 250.], [400., 300.]]
+    window.canvas_edit("endpoints", deepcopy(original))
+    settled(window)
+    window.tool.setCurrentText("Endpoints")
+    canvas = window.canvas
+    target = [original[index][0] + 25, original[index][1] + 80]
+    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, canvas.mapFromScene(QPointF(*original[index])))
+    endpoint_mouse_move(canvas, target, Qt.KeyboardModifier.ShiftModifier)
+    assert canvas.draft[1-index] == original[1-index]
+    assert canvas.draft[index][1] == original[1-index][1]
+    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, canvas.mapFromScene(QPointF(*target)))
+    settled(window)
+    pts = window.document.project.calibration.endpoints
+    assert pts[1-index] == original[1-index] and pts[index][1] == original[1-index][1]
+    window.undo(-1)
+    settled(window)
+    assert window.document.project.calibration.endpoints == original
+
+
+def test_shift_toggle_updates_endpoint_preview_without_mouse_movement(window, examples):
+    open_clean(window, examples)
+    window.tool.setCurrentText("Endpoints")
+    canvas = window.canvas
+    a, b = [150, 250], [430, 330]
+    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, pos=canvas.mapFromScene(QPointF(*a)))
+    endpoint_mouse_move(canvas, b)
+    free = deepcopy(canvas.draft)
+    assert free[0][1] != free[1][1]
+    QTest.keyPress(canvas, Qt.Key.Key_Shift)
+    assert canvas.draft[0][1] == canvas.draft[1][1]
+    QTest.keyRelease(canvas, Qt.Key.Key_Shift)
+    assert canvas.draft == free
+    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, pos=canvas.mapFromScene(QPointF(*b)))
+    settled(window)
+    assert window.document.project.calibration.endpoints == free
+
+
+def test_shift_release_event_uses_final_pointer_without_move_event(window, examples):
+    open_clean(window, examples)
+    window.tool.setCurrentText("Endpoints")
+    canvas = window.canvas
+    a, b = [150, 250], [430, 330]
+    start, end = [canvas.mapFromScene(QPointF(*p)) for p in (a, b)]
+    expected_x = canvas.mapToScene(end).x()
+    QTest.mousePress(canvas.viewport(), Qt.MouseButton.LeftButton, pos=start)
+    QTest.mouseRelease(canvas.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier, end)
+    settled(window)
+    pts = window.document.project.calibration.endpoints
+    assert pts[0][1] == pts[1][1] and pts[1][0] == pytest.approx(expected_x)

@@ -13,6 +13,7 @@ Crop images, review calibration evidence, edit scale-bar annotations, create lin
 ## Features
 
 - **Calibration with evidence:** manual sample spacing, endpoint measurements, OME-TIFF physical sizes, local OCR candidates, and transfer from a matching reference. Calibration remains pending until reviewed and confirmed.
+- **Shift-constrained calibration:** hold Shift while drawing or moving a calibration endpoint to keep the reference line horizontal. Release Shift for free placement.
 - **Image rotation:** 90° left/right, 180°, and custom clockwise angles, with expanded output, horizontal scale labels, recorded transforms, and exact native quarter-turn data exports.
 - **Source-format export by default:** keep TIFF/PNG/JPEG file type and original bit depth with the new scale bar, including uint16 PNG/TIFF and float32 TIFF. One-click 2×/4× output scales annotation layout with the image.
 - **Six crop shapes:** rectangle, square, circle, ellipse, polygon, and freehand, with fixed/custom aspect ratios and transparent output.
@@ -40,7 +41,7 @@ The portable Windows x64 release has no installer or automatic updater. Logs, ge
 For an image with a readable existing scale bar:
 
 1. Open it. In **Source** and **Edit • source coordinates**, click **Pick endpoints** and drag from one end of the existing bar to the other.
-2. Refine the endpoints; for a horizontal bar, make their y values equal. **Then** enter the existing label in **Known length**, including the unit. Select **Assume square pixels** only when justified.
+2. Hold **Shift** while drawing or moving an endpoint to keep the line horizontal; you can also make their y values equal numerically. **Then** enter the existing label in **Known length**, including the unit. Select **Assume square pixels** only when justified.
 3. Click **Use endpoints**, review the spacing, then **Confirm calibration**.
 4. Open **Scale bar**, choose a **Preset**, and click **Use preset**. Check **Draw a physical scale bar**, enter the desired **Physical length**, choose **Position**, and click **Apply style / length**.
 5. To move the bar and label together, click **Drag group** and drag in the edit view. Review any old annotation, inspect **Output pixel preview**, then run **Export → Export check / locate** and export.
@@ -49,9 +50,9 @@ Example only: an existing **50 nm / 250 px** bar establishes **0.2 nm/px**. A ne
 
 ### Manuals / 使用手册
 
-Both manuals cover the same v0.2.2 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
+Both manuals cover the same v0.2.3 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
 
-两份手册适用于 v0.2.2，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
+两份手册适用于 v0.2.3，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
 
 | Task / 操作 | English | 简体中文 |
 |---|---|---|
@@ -61,7 +62,7 @@ Both manuals cover the same v0.2.2 workflows, including calibration, scale bars,
 | Rotation / 图像旋转 | [Controls and calibration](docs/USER_GUIDE.md#image-rotation) | [操作与校准](docs/USER_GUIDE.zh-CN.md#image-rotation) |
 | Troubleshooting / 常见问题 | [Find a fix](docs/USER_GUIDE.md#troubleshooting) | [排查问题](docs/USER_GUIDE.zh-CN.md#troubleshooting) |
 
-The **v0.2.2** portable ZIP includes both updated manuals. For rotation, use **Crop → Image rotation** and inspect **Output pixel preview**. Source editing remains in original coordinates. Custom-angle calibrated bars need confirmed equal x/y spacing; quarter turns exchange the source axes as appropriate.
+The **v0.2.3** portable ZIP includes both updated manuals. For rotation, use **Crop → Image rotation** and inspect **Output pixel preview**. Source editing remains in original coordinates. Custom-angle calibrated bars need confirmed equal x/y spacing; quarter turns exchange the source axes as appropriate.
 
 ## Export formats
 

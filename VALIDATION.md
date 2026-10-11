@@ -1,8 +1,8 @@
 # Validation record
 
-Date: **2026-10-11**. Version: **0.2.2**. Platform: local Windows x64.
+Date: **2026-10-11**. Version: **0.2.3**. Platform: local Windows x64.
 
-The source suite passed **108 tests in 46.24 seconds**, with no skipped tests. The final frozen EXE passed **31 general checks plus the complete 130-image corpus check** (32 top-level checks) in **274.10 seconds**, from a separate Unicode directory with Python/Conda variables removed and PATH restricted to Windows System32. Every supplied supported image passed GUI loading, independent decoding comparison, PNG export, project save/load, exact native TIFF cropping, source-format export with original bit depth, and unchanged source hashes. Lossless source-format crops matched the source samples exactly; JPEG is re-encoded. The exact binary hash and completed results are recorded in `docs/RELEASE_VALIDATION.json`.
+The source suite passed **114 tests in 58.30 seconds**, with no skipped tests. The final frozen EXE passed **33 general checks plus the complete 130-image corpus check** (34 top-level checks) in **242.98 seconds**, from a separate Unicode directory with Python/Conda variables removed and PATH restricted to Windows System32. Every supplied supported image passed GUI loading, independent decoding comparison, PNG export, project save/load, exact native TIFF cropping, source-format export with original bit depth, and unchanged source hashes. Lossless source-format crops matched the source samples exactly; JPEG is re-encoded. The exact binary hash and completed results are recorded in `docs/RELEASE_VALIDATION.json`.
 
 Public examples are explicitly **synthetic**. Private validation covers **130 images** from the two previously supplied SEM/TEM folders and the supplied 4096 × 4096 uint8 TIFF style reference. It includes LZW-compressed float32 TEM images. The reference appearance was inspected locally; only a synthetic style illustration is distributed. Input files, filenames, detailed logs, and real-image screenshots remain local. Another physical computer and a clean Windows VM remain untested. Successful import and appearance matching do not establish calibration accuracy.
 
@@ -17,6 +17,7 @@ Public examples are explicitly **synthetic**. Private validation covers **130 im
 | Default format | The actual GUI export dialog and a separate recipe process default to the source file type and bit depth |
 | Source precision | Annotated uint16 TIFF/PNG, float32 TIFF, RGB/RGBA, native-precision insets, grayscale mapping, rotated transparency, and JPEG re-encoding pass |
 | Rotation | 90°/180°/270° are exact sample permutations at native 1×; custom-angle float ramps agree with the inverse affine transform; axis exchange, masks, bars, insets, dragging, SVG, history, and project replay pass |
+| Shift endpoint constraint | GUI drags at different zooms, either endpoint, live Shift toggling, final release coordinates, undo, saved projects, and horizontal-only calibration pass |
 | Calibration feedback | Cropping retains confirmation; endpoint edits set Pending and hide the bar with actionable feedback; confirmation exits the endpoint tool |
 | View independence | Exports at 50%, 100%, and 200% view zoom decode to identical pixels |
 | Reference transfer | 1024² to 2048² content matching gives approximately 2× sampling; 0.5 becomes 0.25 nm/px |
@@ -40,7 +41,7 @@ Additional checks cover calibration conflicts without averaging, square-pixel as
 
 ## Actual EXE checks
 
-The self-test retains the following 11 original checks, plus centered startup and four LZW dtype/channel regressions (uint8 gray, uint16 gray, RGBA, float32 with floating-point prediction). Seven added checks cover exact quarter-turn samples, crop/calibration retention, rotated dimensions, custom-angle bar placement, preview/export agreement, saved rotation, and endpoint feedback. Four more verify the default source format, 2× annotated uint16 PNG and float32 TIFF precision, and the GUI resolution preset. Two further checks verify the default Velox-style appearance and editable SVG outlines. Two label-placement checks verify legacy main/inset settings and fixed rendering above the bar. The private corpus adds one top-level aggregate check.
+The self-test retains the following 11 original checks, plus centered startup and four LZW dtype/channel regressions (uint8 gray, uint16 gray, RGBA, float32 with floating-point prediction). Seven added checks cover exact quarter-turn samples, crop/calibration retention, rotated dimensions, custom-angle bar placement, preview/export agreement, saved rotation, and endpoint feedback. Four more verify the default source format, 2× annotated uint16 PNG and float32 TIFF precision, and the GUI resolution preset. Two further checks verify the default Velox-style appearance and editable SVG outlines. Two label-placement checks verify legacy main/inset settings and fixed rendering above the bar. Two Shift-drag checks verify horizontal source endpoints and the retained calibration-review requirement. The private corpus adds one top-level aggregate check.
 
 1. Start a Qt window and generate persistent synthetic examples.
 2. Verify examples live outside the one-file extraction directory.
@@ -70,7 +71,7 @@ Local reports are under `test-output`, intentionally excluded from Git. A checke
 .\.venv\Scripts\python.exe scripts\verify_exe.py
 ```
 
-The 108 tests include real Qt mouse/keyboard events, independent recipe processes, compression decoding, scientific precision comparisons, and geometry checks. The GUI export regression uses the default format dialog, verifies 2×/4× annotation layout and dimensions, checks undo, and decodes the resulting 16-bit TIFF. Nine style cases and one additional GUI case cover outlined geometry and preset/template compatibility. Ten additional cases cover fixed label placement and legacy template/project compatibility. Event processing is interleaved with waits that release the Python GIL so workers can complete.
+The 114 tests include real Qt mouse/keyboard events, independent recipe processes, compression decoding, scientific precision comparisons, and geometry checks. The GUI export regression uses the default format dialog, verifies 2×/4× annotation layout and dimensions, checks undo, and decodes the resulting 16-bit TIFF. Nine style cases and one additional GUI case cover outlined geometry and preset/template compatibility. Ten additional cases cover fixed label placement and legacy template/project compatibility. Six further GUI cases cover Shift-constrained endpoint interaction. Event processing is interleaved with waits that release the Python GIL so workers can complete.
 
 ## Performance and limits
 

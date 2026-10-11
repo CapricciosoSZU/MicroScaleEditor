@@ -1,6 +1,6 @@
 # Windows packaging
 
-`dist/v0.2.2/MicroScaleEditor.exe` is a single-file Windows x64 program containing Python, Qt, OpenCV, tifffile, imagecodecs (including LZW TIFF), and RapidOCR/ONNX CPU models. It runs without this repository, a virtual environment, a separate Python installation, or model downloads.
+`dist/v0.2.3/MicroScaleEditor.exe` is a single-file Windows x64 program containing Python, Qt, OpenCV, tifffile, imagecodecs (including LZW TIFF), and RapidOCR/ONNX CPU models. It runs without this repository, a virtual environment, a separate Python installation, or model downloads.
 
 The portable ZIP also includes English and Simplified Chinese user manuals and third-party license notices. Retain those notices when redistributing.
 
@@ -40,9 +40,9 @@ For an offline base Anaconda installation that already has the required build to
 # Copies the EXE to a Unicode path and strips Python/Conda environment variables
 .\.venv\Scripts\python.exe scripts\verify_exe.py
 # Direct diagnostic invocation; opens a real Qt window
-Start-Process -FilePath '.\dist\v0.2.2\MicroScaleEditor.exe' -ArgumentList '--self-test', 'C:\checks\microscale' -Wait
+Start-Process -FilePath '.\dist\v0.2.3\MicroScaleEditor.exe' -ArgumentList '--self-test', 'C:\checks\microscale' -Wait
 # Replay a saved project
-Start-Process -FilePath '.\dist\v0.2.2\MicroScaleEditor.exe' -ArgumentList '--recipe', 'C:\data\project.json', '--output', 'C:\data\result.png', '--format', 'png' -WindowStyle Hidden -Wait
+Start-Process -FilePath '.\dist\v0.2.3\MicroScaleEditor.exe' -ArgumentList '--recipe', 'C:\data\project.json', '--output', 'C:\data\result.png', '--format', 'png' -WindowStyle Hidden -Wait
 ```
 
 Recipe replay defaults to `--format source`, retaining the input file type and bit depth with annotations. The output extension is adjusted to match the source. Use explicit `--format png` for the 8-bit presentation shown above.
@@ -54,7 +54,7 @@ The diagnostic folder contains `self-test.json`, a screenshot, and exports. Succ
 ## Release contents
 
 - `MicroScaleEditor.exe`: standalone application.
-- `MicroScaleEditor-v0.2.2-Windows-x64.zip`: the same application, documentation, and third-party notices.
+- `MicroScaleEditor-v0.2.3-Windows-x64.zip`: the same application, documentation, and third-party notices.
 - `SHA256SUMS.txt`: checksums for both downloads.
 
 The repository excludes virtual environments, builds, binaries, logs, temporary checks, and recovery files. Executables are published in GitHub Releases.

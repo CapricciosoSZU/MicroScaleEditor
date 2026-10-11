@@ -9,7 +9,8 @@ import traceback
 
 import numpy as np
 import tifffile
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, QPointF, Qt, QEvent
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QApplication
 
 from .gui import MainWindow
@@ -51,6 +52,21 @@ def run_self_test(app, output_dir, test_images=None):
         check("Startup centered within usable screen", available.contains(frame) and (frame.center() - available.center()).manhattanLength() <= 2)
         check("Same as source is the default GUI export", window.export_kind.currentText() == "Same as source (original bit depth)")
         check("Velox-style is the default for new images", window.document.project.style.outline and window.document.project.style.anchor == "bottom-left" and window.preset.currentText() == "Velox-style")
+        window.tool.setCurrentText("Endpoints")
+        canvas = window.canvas
+        start, end = [canvas.mapFromScene(QPointF(*point)) for point in ([150, 250], [430, 330])]
+        for kind, pos, button, buttons in (
+            (QEvent.Type.MouseButtonPress, start, Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton),
+            (QEvent.Type.MouseMove, end, Qt.MouseButton.NoButton, Qt.MouseButton.LeftButton),
+            (QEvent.Type.MouseButtonRelease, end, Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton),
+        ):
+            event = QMouseEvent(kind, QPointF(pos), QPointF(canvas.viewport().mapToGlobal(pos)), button, buttons, Qt.KeyboardModifier.ShiftModifier)
+            app.sendEvent(canvas.viewport(), event)
+        settle()
+        points = window.document.project.calibration.endpoints
+        check("Shift drag creates horizontal source endpoints", points[0][1] == points[1][1] and abs(points[0][0] - points[1][0]) > 100)
+        check("Shift endpoint edit still requires calibration review", window.document.project.calibration.status == "Pending" and window.document.project.calibration.endpoints_dirty)
+        window.tool.setCurrentText("Pan")
         example_dir = runtime_dir("examples")
         check("Examples outside extraction directory", str(getattr(sys, "_MEIPASS", "not-frozen")) not in str(example_dir))
         window.load_image(example_dir / "SYNTHETIC_50nm_250px.png")

@@ -2,7 +2,7 @@
 
 [English](USER_GUIDE.md) · [简体中文（zh-CN）](USER_GUIDE.zh-CN.md) · [Project home](../README.md) · [Windows download](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest)
 
-Applies to **v0.2.2**. Manual revised **2026-10-11**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
+Applies to **v0.2.3**. Manual revised **2026-10-11**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
 
 MicroScale Editor prepares calibrated SEM/TEM real-space figures. It keeps original image arrays read-only and records cropping, annotation treatment, calibration, and styling separately. Work stays on your computer.
 
@@ -29,8 +29,8 @@ For an image with a readable existing scale bar:
 
 1. Click **Open image…** and choose the image.
 2. Select **Edit • source coordinates** in the center and **Source** on the right.
-3. Click **Pick endpoints**, then **press and drag** from one end of the existing bar to the other. Release the mouse. Zoom in and refine the endpoints as needed.
-4. For a horizontal bar, set the two endpoint **y** values equal. **After positioning the endpoints**, enter the existing bar's label in **Known length**, such as `50 nm`.
+3. Click **Pick endpoints**, then **press and drag** from one end of the existing bar to the other. For a horizontal reference, hold **Shift** through mouse release. Zoom in and refine the endpoints as needed.
+4. With **Shift** held, the two endpoint **y** values stay equal; you can also set them numerically. **After positioning the endpoints**, enter the existing bar's label in **Known length**, such as `50 nm`.
 5. Select **Assume square pixels** only if you have reason to use equal horizontal and vertical sampling. Click **Use endpoints**, review the proposed calibration, then **Confirm calibration**.
 6. Open **Scale bar**. Choose a **Preset**, click **Use preset**, then check **Draw a physical scale bar**. Enter the desired **Physical length**, choose **Position**, and click **Apply style / length**.
 7. Review the original annotation too: [keep it, crop it away, or apply a documented treatment](#existing-annotations-and-masks). Adding a new bar does not remove an old one.
@@ -45,7 +45,7 @@ Download and run `MicroScaleEditor.exe`. No separate Python installation is need
 
 **Open image…** accepts PNG, JPEG, and supported single-page TIFF files, including LZW-compressed TIFF. To import several files in the same dialog, use **Ctrl+click**, **Shift+click**, or **Ctrl+A**. Imported images appear in the left-hand list. Click a list item to work on that image.
 
-Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.2. Large groups retain their full source arrays in memory; use smaller groups if needed.
+Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.3. Large groups retain their full source arrays in memory; use smaller groups if needed.
 
 | Area | Purpose |
 |---|---|
@@ -95,8 +95,8 @@ Square pixels are an assumption about specimen sampling, not a claim based on th
 
 1. Open the image and select **Source** and **Edit • source coordinates**.
 2. Zoom in on the existing scale bar using the mouse wheel.
-3. Click **Pick endpoints**. Press at one end of the bar, drag to the other, then release. This is a drag gesture, not two separate clicks.
-4. Refine the endpoint handles, or type coordinates in **Endpoint 1 · x / y** and **Endpoint 2 · x / y**. For a horizontal bar, make the two y values exactly equal.
+3. Click **Pick endpoints**. Press at one end of the bar, drag to the other, then release. Hold **Shift** through mouse release to constrain the line horizontally. This is a drag gesture, not two separate clicks.
+4. Refine the endpoint handles, or type coordinates in **Endpoint 1 · x / y** and **Endpoint 2 · x / y**. Holding **Shift** while moving either endpoint keeps the other endpoint fixed and their y values equal. Pressing or releasing Shift during a drag updates the preview immediately; without Shift, placement is free.
 5. After the endpoints are set, enter the printed label in **Known length**, including its unit. For example, enter `5 nm` only when that is the existing bar's actual label.
 6. Decide whether **Assume square pixels** is justified. Leaving it unchecked is sufficient to create a horizontal bar from a horizontal reference.
 7. Click **Use endpoints**. Review the displayed spacing and evidence.
@@ -193,7 +193,7 @@ Double-click the bar/label group in the edit view to enter a new physical length
 
 After editing these controls, click **Apply style / length**. In **print** output mode, font size and bar thickness use **Export → Print font / bar (pt)** instead of the pixel fields. Available font families depend on the computer.
 
-In print mode the outline scales with the bar thickness. The **2× / 4×** resolution buttons also scale outline width with the rest of the layout. Outlines are retained in preview, PNG, annotated TIFF/source-format exports, clipboard, and editable SVG text. Plain White/Black presets turn outlining off. Use v0.2.2 or later to reopen projects or templates saved with the new outline fields.
+In print mode the outline scales with the bar thickness. The **2× / 4×** resolution buttons also scale outline width with the rest of the layout. Outlines are retained in preview, PNG, annotated TIFF/source-format exports, clipboard, and editable SVG text. Plain White/Black presets turn outlining off. Use v0.2.3 or later to reopen projects or templates saved with the new outline fields.
 
 **Save template… / Load template…** store and restore bar styles. **Copy settings… / Paste settings** transfer selected styles/output settings between open images. Calibration is excluded by default. If explicitly copied, it becomes **Pending** and must be reviewed for the destination image.
 
@@ -340,7 +340,7 @@ Omitting `--format` now selects `source`; an explicit `--format png` produces th
 | Zoom / pan | Mouse wheel / middle-drag, or **Pan** |
 | Fit / 100% | F / 1 with the canvas focused |
 | Compare original | Hold B with the canvas focused |
-| Place calibration endpoints | **Pick endpoints**, then press-drag-release |
+| Place calibration endpoints | **Pick endpoints**, then press-drag-release; hold Shift for a horizontal line, including endpoint adjustments |
 | Move bar group | **Drag group**, then drag; arrows = 1 output px, Shift+arrows = 10 |
 | Edit new bar length | Double-click its group in the edit view |
 | Finish polygon / cancel current drawing | Enter or right-click / Esc |
@@ -356,18 +356,18 @@ Canvas shortcuts require canvas focus; they do not apply while typing in a form 
 |---|---|
 | No new bar appears | Read the live message above the scale controls and use **Review calibration**; confirm spacing for the rotated horizontal direction; check **Draw a physical scale bar**; click **Apply style / length**; use a contrasting color and inspect export issues |
 | Calibration is still **Pending** | Click **Use endpoints** or **Use manual calibration**, review evidence, then **Confirm calibration**; resolve a reported evidence conflict if needed |
-| “An oblique segment…” error | A near-horizontal drag may leave different y values. Make them equal for a horizontal bar; use square pixels only when justified |
+| “An oblique segment…” error | Hold Shift while drawing or adjusting calibration endpoints, or enter equal y values for a horizontal reference; use square pixels only when justified |
 | Known length or a style field resets | Finish endpoint dragging or choosing a preset first, then enter values and click the corresponding **Use / Apply** button before another operation |
 | Scale label/bar/plate is outside the valid crop | Move the whole group inward, reduce its physical length or font/plate size, or change the crop; inspect irregular-crop boundaries |
 | The bar looks too long or too short | Check `nm` versus `μm`, the measured endpoint span, **Known length** versus **Physical length**, and the output factor |
 | The old bar remains | A new bar does not erase existing pixels. Review the old-annotation treatment and include both its line and text |
 | Dragging seems ineffective | Switch from **Output pixel preview** to **Edit • source coordinates**, choose the intended tool, and apply pending form values |
 | A float/16-bit TIFF looks dark or low contrast | Review **Source → Display mapping**. Use data TIFF export to preserve the original values rather than relying on the 8-bit preview |
-| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.2). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
+| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.3). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
 | Reference transfer is disabled or rejected | Verify actual matching content and registration; review point pairs/overlap. Unsupported distortion or a different field of view cannot be fixed by matching filenames |
 | An exported TIFF has no visible bar | **TIFF data only** intentionally excludes annotations. Choose the default **Same as source (original bit depth)** for a source-precision TIFF with a bar, or another presentation format |
 | Opening many files uses too much memory | Work in smaller groups; all imported sources retain full-resolution arrays. There is no batch export queue |
-| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.2. Centering happens on initial show, not after every manual move |
+| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.3. Centering happens on initial show, not after every manual move |
 
 <a id="scope-and-help"></a>
 ## 13. Supported scope and further help

@@ -2,7 +2,7 @@
 
 [English](USER_GUIDE.md) · [简体中文（zh-CN）](USER_GUIDE.zh-CN.md) · [项目主页](../README.md) · [Windows 下载](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest)
 
-适用版本：**v0.2.2**。手册更新日期：**2026-10-11**。软件界面仍为英文；本手册保留加粗的英文按钮和字段名称，方便在软件中查找。文中的数值仅用于演示，不是对你的图像进行的实际测量。
+适用版本：**v0.2.3**。手册更新日期：**2026-10-11**。软件界面仍为英文；本手册保留加粗的英文按钮和字段名称，方便在软件中查找。文中的数值仅用于演示，不是对你的图像进行的实际测量。
 
 MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图像。原始图像数组保持只读；裁剪、旧标注处理、校准和样式分别记录。图像处理在本机完成。
 
@@ -29,7 +29,7 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 
 1. 点击 **Open image…**，选择图像。
 2. 中间选择 **Edit • source coordinates**（源坐标编辑视图），右侧选择 **Source**。
-3. 点击 **Pick endpoints**，在已有比例尺的一端按下鼠标，**拖到另一端后松开**。需要时放大图像并微调端点。
+3. 点击 **Pick endpoints**，在已有比例尺的一端按下鼠标，**拖到另一端后松开**。水平参考线可按住 **Shift**，直到松开鼠标；需要时放大图像并微调端点。
 4. 对于水平比例尺，将两个端点的 **y** 值设为相同。**先放好端点，再在 Known length 中填写旧比例尺标注的长度**，例如 `50 nm`。
 5. 只有在有依据认为横纵采样间距相等时，才勾选 **Assume square pixels**。点击 **Use endpoints**，检查计算出的校准值，再点击 **Confirm calibration**。
 6. 打开 **Scale bar**，选择 **Preset** 并点击 **Use preset**；然后勾选 **Draw a physical scale bar**。填写新比例尺的 **Physical length**，选择 **Position**，点击 **Apply style / length**。
@@ -45,7 +45,7 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 
 **Open image…** 支持 PNG、JPEG 和受支持的单页 TIFF，包括 LZW 压缩 TIFF。在同一个文件选择窗口中，可用 **Ctrl+单击**逐个选择、**Shift+单击**连续选择，或 **Ctrl+A** 全选。导入后在左侧图像列表点击某张图，即可编辑它。
 
-每张图的校准和编辑状态独立。批量导入不等于批量校准或批量导出。v0.2.2 需要**逐张导出**。导入的原始数组会保留在内存中，数量较多时建议分组处理。
+每张图的校准和编辑状态独立。批量导入不等于批量校准或批量导出。v0.2.3 需要**逐张导出**。导入的原始数组会保留在内存中，数量较多时建议分组处理。
 
 | 界面区域 | 用途 |
 |---|---|
@@ -95,8 +95,8 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 
 1. 打开图像，选择 **Source** 和 **Edit • source coordinates**。
 2. 用鼠标滚轮放大已有比例尺。
-3. 点击 **Pick endpoints**，在比例尺一端按下鼠标，拖到另一端后松开。需要按住拖动，而不是分开点击两次。
-4. 拖动端点微调，或填写 **Endpoint 1 · x / y** 与 **Endpoint 2 · x / y**。水平比例尺的两个 y 值应完全相同。
+3. 点击 **Pick endpoints**，在比例尺一端按下鼠标，拖到另一端后松开。画水平参考线时按住 **Shift**，直到松开鼠标。需要按住拖动，而不是分开点击两次。
+4. 拖动端点微调，或填写 **Endpoint 1 · x / y** 与 **Endpoint 2 · x / y**。按住 **Shift** 移动任一端点时，对面的端点保持不动，两个 y 值相同。拖动中按下或松开 Shift 会立即更新预览；不按 Shift 时可自由放置。
 5. 端点设置完成后，在 **Known length** 中填写图上标注的长度和单位。只有旧比例尺确实标注 `5 nm` 时，才填 `5 nm`。
 6. 根据依据决定是否勾选 **Assume square pixels**。使用水平参考线绘制水平比例尺时，可以不勾选。
 7. 点击 **Use endpoints**，检查显示的像素间距及依据。
@@ -193,7 +193,7 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 
 修改后点击 **Apply style / length**。在 **print** 输出模式中，字号和条形厚度使用 **Export → Print font / bar (pt)**，而非像素字段。可用字体取决于本机安装情况。
 
-打印模式下描边随条形厚度缩放。**2× / 4×** 分辨率按钮也会随布局同步缩放描边。预览、PNG、带标注 TIFF/原格式输出、剪贴板和可编辑 SVG 文字均保留描边。选择普通 White/Black 预设会关闭描边。含新描边字段的项目或模板请用 v0.2.2 或更新版本重新打开。
+打印模式下描边随条形厚度缩放。**2× / 4×** 分辨率按钮也会随布局同步缩放描边。预览、PNG、带标注 TIFF/原格式输出、剪贴板和可编辑 SVG 文字均保留描边。选择普通 White/Black 预设会关闭描边。含新描边字段的项目或模板请用 v0.2.3 或更新版本重新打开。
 
 **Save template… / Load template…** 保存或读取比例尺样式。**Copy settings… / Paste settings** 可在已打开图像间复制选定的样式/输出设置，默认不复制校准。明确选择复制校准时，目标图的校准会变为 **Pending**，需重新检查并确认。
 
@@ -340,7 +340,7 @@ ROI 坐标使用原始像素；插图位置和宽度使用输出像素。圆形�
 | 缩放 / 平移 | 滚轮 / 中键拖动，或 **Pan** |
 | 适应视图 / 100% | 画布获得焦点后按 F / 1 |
 | 查看原图对照 | 画布获得焦点后按住 B |
-| 放置校准端点 | **Pick endpoints**，然后按下、拖动、松开 |
+| 放置校准端点 | **Pick endpoints**，然后按下、拖动、松开；按住 Shift 约束为水平线，微调端点时也有效 |
 | 移动比例尺组 | **Drag group** 后拖动；方向键移动 1 输出像素，Shift+方向键移动 10 |
 | 修改新比例尺长度 | 在编辑视图双击比例尺组 |
 | 完成多边形 / 取消当前绘制 | Enter 或右键 / Esc |
@@ -356,18 +356,18 @@ ROI 坐标使用原始像素；插图位置和宽度使用输出像素。圆形�
 |---|---|
 | 新比例尺没有出现 | 查看比例尺控件上方的实时提示，点击 **Review calibration**；确认旋转后水平方向的间距；勾选 **Draw a physical scale bar**；点击 **Apply style / length**；使用对比明显的颜色并检查导出问题 |
 | 校准仍是 **Pending** | 点击 **Use endpoints** 或 **Use manual calibration**，检查后再 **Confirm calibration**；如有依据冲突需先解决 |
-| 提示 “An oblique segment…” | 看似水平的拖动可能导致两个 y 值不同。水平条应将 y 设为相同；仅在有依据时采用方形像素假设 |
+| 提示 “An oblique segment…” | 按住 Shift 拖动画线或调整端点，也可输入相同的 y 值；仅在有依据时采用方形像素假设 |
 | 已知长度或样式字段被重置 | 先完成端点拖动或预设选择，再填写参数并点击对应 **Use / Apply**，之后再进行其他操作 |
 | 比例尺、文字或底板超出有效裁剪 | 将整组移入，减小物理长度或字号/底板尺寸，或调整裁剪；特别检查不规则边界 |
 | 比例尺过长或过短 | 核对 `nm` 与 `μm`、端点跨度、**Known length** 与 **Physical length** 的含义，以及输出系数 |
 | 旧比例尺仍然存在 | 新比例尺不会擦除原有像素；检查旧标注处理，并同时包含线条和文字 |
 | 拖动没有效果 | 从 **Output pixel preview** 切回 **Edit • source coordinates**，选择正确工具，并应用尚未提交的参数 |
 | 浮点或 16-bit TIFF 显示很暗、对比度低 | 检查 **Source → Display mapping**；需要保留原始值时导出数据 TIFF，不要将 8-bit 预览当作原始数据 |
-| `COMPRESSION.LZW` 提示需要 `imagecodecs` | 关闭旧程序，运行当前版本 v0.2.2 EXE；源码安装可用 `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` 更新运行依赖 |
+| `COMPRESSION.LZW` 提示需要 `imagecodecs` | 关闭旧程序，运行当前版本 v0.2.3 EXE；源码安装可用 `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` 更新运行依赖 |
 | 参考图转移按钮不可用或匹配被拒绝 | 验证实际内容对应与配准，检查点对和叠加；文件名一致不能解决不支持的变形或不同视野问题 |
 | 导出的 TIFF 没有可见比例尺 | **TIFF data only** 不包含标注；需要保留原精度且带比例尺的 TIFF，请使用默认 **Same as source (original bit depth)**，或选择其他展示格式 |
 | 导入多张图后内存占用过高 | 分组处理；所有已导入源图保留完整数组，当前没有批量导出队列 |
-| 启动窗口似乎仍在旧位置 | 检查标题栏版本，关闭旧实例后启动 v0.2.2；居中只发生在初次显示，不会在每次手动移动后重置 |
+| 启动窗口似乎仍在旧位置 | 检查标题栏版本，关闭旧实例后启动 v0.2.3；居中只发生在初次显示，不会在每次手动移动后重置 |
 
 <a id="scope-and-help"></a>
 ## 13. 支持范围与更多帮助

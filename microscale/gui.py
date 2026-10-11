@@ -383,6 +383,9 @@ class MainWindow(QMainWindow):
         f.addRow("Endpoint 1 · x / y", row(*self.endpoint_fields[:2]))
         f.addRow("Endpoint 2 · x / y", row(*self.endpoint_fields[2:]))
         f.addRow(row(self.button("Pick endpoints", lambda: self.tool.setCurrentText("Endpoints")), self.button("Use endpoints", self.endpoint_calibration)))
+        endpoint_hint = QLabel("Hold Shift while drawing or moving an endpoint to keep the line horizontal.")
+        endpoint_hint.setWordWrap(True)
+        f.addRow(endpoint_hint)
         self.conflict_threshold = number(2, 0, 100)
         f.addRow("Review threshold (%)", self.conflict_threshold)
         self.conflict_threshold.editingFinished.connect(self.safe(self.threshold_change))
@@ -821,7 +824,7 @@ class MainWindow(QMainWindow):
         elif dx < 1e-6:
             sx, sy = None, scale
         else:
-            raise ValueError("An oblique segment cannot determine two independent axes. Explicitly assume square pixels or use an axis-aligned segment.")
+            raise ValueError("An oblique segment cannot determine two independent axes. Use an axis-aligned segment (hold Shift while drawing for horizontal), or explicitly assume square pixels when justified.")
         p.calibration.endpoints, p.calibration.length_nm = pts, nm
         p.calibration.propose(sx, sy, "Endpoint measurement", square, {"endpoints": pts, "length_nm": nm, "rule": p.calibration.rule})
         self.commit()

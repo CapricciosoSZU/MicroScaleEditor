@@ -1,19 +1,19 @@
-# MicroScale Editor v0.2.2
+# MicroScale Editor v0.2.3
 
-Scale-bar labels now always appear above the bar, as requested.
+Hold Shift to draw a horizontal calibration line.
 
-## Fixed label placement
+## Endpoint interaction
 
-- **Label position: Always above the bar** replaces the above/below selector.
-- The same placement applies to main images, linked insets, all presets, previews, clipboard, raster exports, and editable SVG.
-- Existing projects and style templates with `text_position: below` load with the label above. Other appearance settings, physical length, and calibration are preserved. Original project/template files are unchanged until saved.
-- Velox-style remains the default for new images. Original-format and bit-depth export remain the default.
+- In **Source → Pick endpoints**, hold **Shift** while dragging to keep both endpoints at the same source-image y coordinate. Keep Shift held until mouse release.
+- Shift also works when moving either existing endpoint; the opposite endpoint stays fixed.
+- Press or release Shift during a drag to switch between horizontal and free placement immediately. The final mouse-release position is used even when no move event arrives.
+- The constraint is independent of view zoom. It neither assumes square pixels nor confirms calibration automatically: enter **Known length**, then **Use endpoints → Confirm calibration**.
+- The Source panel and oblique-segment warning now explain the shortcut. English and Simplified Chinese manuals are updated.
+- Scale-bar labels remain above the bar. Velox-style and original-format/bit-depth export remain the defaults.
 
-## Manuals / 使用手册
+## 使用方法
 
-Both manuals now describe the fixed label placement and legacy-project behavior.
-
-比例尺文字统一固定在条形上方，适用于主图、放大图、所有预设、预览、剪贴板及导出。界面显示 **Label position: Always above the bar**，不再提供上下位置选择。旧版项目和模板中的 `below` 设置在载入后转为 `above`，其他外观参数、物理长度和校准保持原值。
+在 **Source → Pick endpoints** 中，按住 **Shift** 拖动画线，直到松开鼠标，两个端点会保持同一高度。微调已有任一端点时同样有效，对面的端点保持不动。拖动过程中松开 Shift 可恢复自由放置。之后填写 **Known length**，点击 **Use endpoints → Confirm calibration**；软件不会自动假设正方形像素或自动确认校准。
 
 - [English manual](https://github.com/CapricciosoSZU/MicroScaleEditor/blob/codex/initial-release/docs/USER_GUIDE.md)
 - [简体中文手册](https://github.com/CapricciosoSZU/MicroScaleEditor/blob/codex/initial-release/docs/USER_GUIDE.zh-CN.md)
@@ -22,7 +22,7 @@ Both manuals now describe the fixed label placement and legacy-project behavior.
 ## Downloads
 
 - **MicroScaleEditor.exe** — portable Windows x64 application; no separate Python installation required.
-- **MicroScaleEditor-v0.2.2-Windows-x64.zip** — application, bilingual manuals, synthetic examples, and third-party notices.
+- **MicroScaleEditor-v0.2.3-Windows-x64.zip** — application, bilingual manuals, synthetic examples, and third-party notices.
 - **SHA256SUMS.txt** — checksums for the downloads.
 
-Save work before closing an older copy, then run the new EXE and check **v0.2.2** in its title bar. The application is unsigned and has no automatic updater.
+Save work before closing an older copy, then run the new EXE and check **v0.2.3** in its title bar. The application is unsigned and has no automatic updater.
