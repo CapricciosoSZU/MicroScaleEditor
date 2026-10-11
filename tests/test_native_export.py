@@ -9,7 +9,7 @@ import pytest
 import tifffile
 
 from microscale.image_io import read_source, project_for, display_rgba
-from microscale.model import Crop, file_hash, save_project
+from microscale.model import Crop, Style, file_hash, save_project
 from microscale.rendering import compose, data_crop, export_file
 
 
@@ -32,6 +32,7 @@ def make_source(tmp_path, suffix, dtype, channels=1):
         data.tofile(str(path))
     source = read_source(path)
     p = project_for(source)
+    p.style = Style()
     p.display_low = 0
     p.display_high = 65535 if dtype == np.uint16 else 1000 if dtype == np.float32 else 255
     p.calibration.propose(.2, .2, "Synthetic calibration", True)

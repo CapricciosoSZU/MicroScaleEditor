@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--output", help="Recipe output filename")
     parser.add_argument("--format", choices=["source", "png", "tiff", "data-tiff", "svg"], default="source")
     parser.add_argument("--self-test", metavar="FOLDER", help="Run the packaged GUI/OCR/export check and write its report")
-    parser.add_argument("--test-images", metavar="FOLDER", action="append", help="Also validate local images recursively during --self-test; repeat for multiple folders; reports remain local")
+    parser.add_argument("--test-images", metavar="FILE_OR_FOLDER", action="append", help="Also validate a local image or folder recursively during --self-test; repeat for multiple inputs; reports remain local")
     args = parser.parse_args()
     if args.test_images and not args.self_test:
         parser.error("--test-images requires --self-test")

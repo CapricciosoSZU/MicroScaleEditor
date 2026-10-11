@@ -5,6 +5,7 @@ import numpy as np
 from PySide6.QtWidgets import QApplication
 from microscale.examples import generate_examples
 from microscale.image_io import Source, project_for
+from microscale.model import Style
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -24,6 +25,8 @@ def black_project():
     pixels.setflags(write=False)
     source = Source(pixels, {}, "SYNTHETIC_black.png", "synthetic")
     p = project_for(source)
+    # Legacy unoutlined baseline; outlined geometry has its own coverage.
+    p.style = Style()
     p.calibration.propose(.2, .2, "Synthetic known reference", True)
     p.calibration.confirm()
     p.style.enabled = True

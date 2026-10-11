@@ -1,8 +1,8 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "executable": "MicroScaleEditor.exe",
-  "sha256": "076ca4291e64e1eddd402ef182e7ce01dda3ad345360d7f331823d26056b22a1",
-  "size_bytes": 154234266,
+  "sha256": "bb581fd24afeaab8e4b98e7cf336e9a638418245f307a4c341fbcf0fd9c1e20e",
+  "size_bytes": 154239668,
   "status": "passed",
   "frozen": true,
   "synthetic_inputs_only": false,
@@ -12,11 +12,13 @@
     "GUI startup and persistent synthetic examples",
     "Startup centered within usable screen",
     "Same as source is the default GUI export",
+    "Velox-style is the default for new images",
     "Examples outside extraction directory",
     "Bundled local OCR recognizes 50 nm / 250 px",
     "Scale geometry 25 px",
     "PNG export",
     "SVG vector text and bar",
+    "SVG retains editable outlined lettering",
     "Full-resolution clipboard",
     "Project save/load and masks",
     "Recovery record",
@@ -38,21 +40,22 @@
     "GUI resolution preset doubles image and calibrated bar",
     "All supplied local images passed"
   ],
-  "check_elapsed_seconds": 230.163,
+  "check_elapsed_seconds": 271.14,
   "private_images": {
-    "count": 129,
-    "passed": 129,
+    "count": 130,
+    "passed": 130,
     "compression_counts": {
-      "NONE": 65,
+      "NONE": 66,
       "PNG/JPEG": 33,
       "LZW": 31
     },
     "dataset_counts": {
       "1": 71,
-      "2": 58
+      "2": 58,
+      "3": 1
     },
     "dtype_counts": {
-      "uint8": 99,
+      "uint8": 100,
       "float32": 30
     },
     "images_and_filenames_published": false

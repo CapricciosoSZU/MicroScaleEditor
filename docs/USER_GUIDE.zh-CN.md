@@ -2,7 +2,7 @@
 
 [English](USER_GUIDE.md) · [简体中文（zh-CN）](USER_GUIDE.zh-CN.md) · [项目主页](../README.md) · [Windows 下载](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest)
 
-适用版本：**v0.2.0**。手册更新日期：**2026-10-09**。软件界面仍为英文；本手册保留加粗的英文按钮和字段名称，方便在软件中查找。文中的数值仅用于演示，不是对你的图像进行的实际测量。
+适用版本：**v0.2.1**。手册更新日期：**2026-10-11**。软件界面仍为英文；本手册保留加粗的英文按钮和字段名称，方便在软件中查找。文中的数值仅用于演示，不是对你的图像进行的实际测量。
 
 MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图像。原始图像数组保持只读；裁剪、旧标注处理、校准和样式分别记录。图像处理在本机完成。
 
@@ -45,7 +45,7 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 
 **Open image…** 支持 PNG、JPEG 和受支持的单页 TIFF，包括 LZW 压缩 TIFF。在同一个文件选择窗口中，可用 **Ctrl+单击**逐个选择、**Shift+单击**连续选择，或 **Ctrl+A** 全选。导入后在左侧图像列表点击某张图，即可编辑它。
 
-每张图的校准和编辑状态独立。批量导入不等于批量校准或批量导出。v0.2.0 需要**逐张导出**。导入的原始数组会保留在内存中，数量较多时建议分组处理。
+每张图的校准和编辑状态独立。批量导入不等于批量校准或批量导出。v0.2.1 需要**逐张导出**。导入的原始数组会保留在内存中，数量较多时建议分组处理。
 
 | 界面区域 | 用途 |
 |---|---|
@@ -57,7 +57,7 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 | **Scale bar** | 新比例尺的长度、外观和位置 |
 | **Export** | 输出尺寸、检查、格式和复制到剪贴板 |
 
-![MicroScale Editor 裁剪与旋转界面，图中使用 SYNTHETIC 人工合成示例](images/editor.png)
+![MicroScale Editor 比例尺设置界面，图中使用 SYNTHETIC 人工合成示例](images/editor.png)
 
 *界面示例使用人工合成数据，不是真实样品图像。*
 
@@ -156,13 +156,17 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 
 1. 确认水平校准状态为 **Confirmed**。
 2. 打开 **Scale bar** 标签页。
-3. 在 **Preset** 中选择 **White**（白色）、**Black**（黑色）或 **White on dark plate**（深色底板上的白色），点击 **Use preset**。这一步应在其他样式编辑之前完成。
+3. 新打开的图像默认使用 **Velox-style**：白色文字和条形配黑色描边，文字在条形上方左对齐，整组位于左下角。已有项目可选择 **Preset → Velox-style → Use preset** 应用。仍可选择 **White**（白色）、**Black**（黑色）或 **White on dark plate**（深色底板上的白色）。这一步应在其他样式编辑之前完成。
 4. 勾选 **Draw a physical scale bar**。
 5. 在 **Physical length** 中输入新比例尺要表示的长度和单位，例如 `5 nm`、`500 nm` 或 `1 μm`。也可以通过 **Quick physical length** 或 **Suggested lengths** 选择，再检查填入的值。
 6. 设置 **Position**，例如 `bottom-right`（右下角），并按需调整 **Margin (output px)**。
 7. 点击 **Apply style / length**，在 **Output pixel preview** 中查看比例尺和文字。
 
 软件会根据校准值计算条形宽度，无需手绘出像素宽度。要改变所表示的长度，修改 **Physical length** 后再次应用。要隐藏新比例尺，取消 **Draw a physical scale bar** 并应用。
+
+**Velox-style** 参照提供的 Thermo Fisher Velox 示例外观。初始字号、条形、描边和边距随图像尺寸设置。已有项目与模板保留原样式；应用预设保留当前物理长度和校准，不会自动启用比例尺或确认校准。黑色条形边框位于校准长度的外边界以内：测量应使用完整外边缘跨度，不能只量中间白色部分。
+
+![人工合成渐变背景上的 Velox-style 比例尺](images/velox-style.png)
 
 ### 4.2 整体移动比例尺与文字
 
@@ -181,9 +185,14 @@ MicroScale Editor 用于制作经过物理尺寸校准的 SEM/TEM 实空间图�
 | **Color** | 颜色名称或 `#RRGGBB`，例如白色 `#ffffff`、黑色 `#000000` |
 | **Bar thickness (px)** | 在 native/width 模式中，以输出像素为单位设置条形厚度 |
 | **Background plate** | 在新比例尺和文字后面添加底板 |
+| **Outline bar and text** | 在文字周围及条形内部添加描边，无需矩形底板 |
+| **Outline color / Outline width (px)** | 在展开的详细设置中调整描边颜色与宽度；宽度必须小于条形厚度和长度的一半 |
+| **Text alignment** | 文字和条形在同一组内左对齐、居中或右对齐 |
 | **Font, end ticks and background details** | 展开后设置 **End ticks**、**Font family**、**Font size (px)**、**Bold**、**Text**（`above`/`below`）、**Text gap (px)**、**Plate color**、**Plate opacity** |
 
 修改后点击 **Apply style / length**。在 **print** 输出模式中，字号和条形厚度使用 **Export → Print font / bar (pt)**，而非像素字段。可用字体取决于本机安装情况。
+
+打印模式下描边随条形厚度缩放。**2× / 4×** 分辨率按钮也会随布局同步缩放描边。预览、PNG、带标注 TIFF/原格式输出、剪贴板和可编辑 SVG 文字均保留描边。选择普通 White/Black 预设会关闭描边。含新描边字段的项目或模板请用 v0.2.1 或更新版本重新打开。
 
 **Save template… / Load template…** 保存或读取比例尺样式。**Copy settings… / Paste settings** 可在已打开图像间复制选定的样式/输出设置，默认不复制校准。明确选择复制校准时，目标图的校准会变为 **Pending**，需重新检查并确认。
 
@@ -353,11 +362,11 @@ ROI 坐标使用原始像素；插图位置和宽度使用输出像素。圆形�
 | 旧比例尺仍然存在 | 新比例尺不会擦除原有像素；检查旧标注处理，并同时包含线条和文字 |
 | 拖动没有效果 | 从 **Output pixel preview** 切回 **Edit • source coordinates**，选择正确工具，并应用尚未提交的参数 |
 | 浮点或 16-bit TIFF 显示很暗、对比度低 | 检查 **Source → Display mapping**；需要保留原始值时导出数据 TIFF，不要将 8-bit 预览当作原始数据 |
-| `COMPRESSION.LZW` 提示需要 `imagecodecs` | 关闭旧程序，运行当前版本 v0.2.0 EXE；源码安装可用 `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` 更新运行依赖 |
+| `COMPRESSION.LZW` 提示需要 `imagecodecs` | 关闭旧程序，运行当前版本 v0.2.1 EXE；源码安装可用 `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` 更新运行依赖 |
 | 参考图转移按钮不可用或匹配被拒绝 | 验证实际内容对应与配准，检查点对和叠加；文件名一致不能解决不支持的变形或不同视野问题 |
 | 导出的 TIFF 没有可见比例尺 | **TIFF data only** 不包含标注；需要保留原精度且带比例尺的 TIFF，请使用默认 **Same as source (original bit depth)**，或选择其他展示格式 |
 | 导入多张图后内存占用过高 | 分组处理；所有已导入源图保留完整数组，当前没有批量导出队列 |
-| 启动窗口似乎仍在旧位置 | 检查标题栏版本，关闭旧实例后启动 v0.2.0；居中只发生在初次显示，不会在每次手动移动后重置 |
+| 启动窗口似乎仍在旧位置 | 检查标题栏版本，关闭旧实例后启动 v0.2.1；居中只发生在初次显示，不会在每次手动移动后重置 |
 
 <a id="scope-and-help"></a>
 ## 13. 支持范围与更多帮助

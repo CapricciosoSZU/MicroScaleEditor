@@ -501,6 +501,7 @@ def test_default_source_export_and_resolution_presets(window, examples, tmp_path
     window.apply_style()
     settled(window)
     before = deepcopy(window.document.project)
+    assert before.style.outline
     for factor in (2, 4):
         next(b for b in window.findChildren(QPushButton) if b.text() == f"{factor}×").click()
         settled(window)
@@ -508,6 +509,7 @@ def test_default_source_export_and_resolution_presets(window, examples, tmp_path
         assert p.calibration == before.calibration and p.crop == before.crop
         assert p.style.font_size == before.style.font_size * factor
         assert p.style.thickness == before.style.thickness * factor
+        assert p.style.outline_width == before.style.outline_width * factor
         assert window.composition.scale_length_px == 25 * factor
         assert (window.result_image.width(), window.result_image.height()) == (400 * factor, 300 * factor)
         assert not any(i.severity == "error" for i in window.composition.issues)
@@ -523,3 +525,34 @@ def test_default_source_export_and_resolution_presets(window, examples, tmp_path
     assert data.dtype == np.uint16 and data.shape == (600, 800)
     assert np.unique(data[:200, :200]).size > 256
     assert "Exported:" in window.notice.text()
+
+
+def test_velox_preset_template_and_legacy_switch(window, examples, tmp_path, monkeypatch):
+    open_clean(window, examples)
+    assert window.preset.currentText() == "Velox-style"
+    assert window.document.project.style.outline
+    calibrate_manual(window)
+    calibration = deepcopy(window.document.project.calibration)
+    window.scale_form.enabled.setChecked(True)
+    window.scale_form.length.setText("50 nm")
+    window.apply_style()
+    window.preset.setCurrentText("White")
+    window.apply_preset()
+    assert not window.document.project.style.outline
+    window.preset.setCurrentText("Velox-style")
+    window.apply_preset()
+    settled(window)
+    style = deepcopy(window.document.project.style)
+    assert style.outline and style.text_align == "left"
+    assert style.enabled and style.length_nm == 50 and style.anchor == "bottom-left"
+    assert window.document.project.calibration == calibration
+    target = tmp_path / "style.json"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **kw: (str(target), ""))
+    window.save_template()
+    window.preset.setCurrentText("Black")
+    window.apply_preset()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(target), ""))
+    window.load_template()
+    settled(window)
+    assert window.document.project.style == style
+    assert window.composition.scale_length_px == 250

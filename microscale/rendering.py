@@ -143,8 +143,19 @@ def scale_primitives(style, calibration, k, size, output):
     thickness = positive(thickness, "Bar thickness")
     font = font_for(style, output)
     label = format_length(style.length_nm)
-    fm = QFontMetricsF(font)
-    text_bounds = fm.boundingRect(label)
+    outline = positive(style.outline_width, "Outline width") if style.outline else 0.
+    if outline and output.mode == "print":
+        outline *= thickness / positive(style.thickness, "Bar thickness")
+    if outline * 2 >= min(length, thickness):
+        raise ValueError("Outline is too wide for the scale bar. Reduce outline width or increase bar thickness / physical length.")
+    if style.text_align not in ("left", "center", "right"):
+        raise ValueError("Text alignment must be left, center or right.")
+    if outline:
+        text_path = QPainterPath()
+        text_path.addText(QPointF(), font, label)
+        text_bounds = text_path.boundingRect().adjusted(-outline, -outline, outline, outline)
+    else:
+        text_bounds = QFontMetricsF(font).boundingRect(label)
     tw, th = text_bounds.width(), text_bounds.height()
     pad = max(4., thickness) if style.plate else 0.
     cap = thickness * 2 if style.endcaps else 0.
@@ -160,16 +171,19 @@ def scale_primitives(style, calibration, k, size, output):
     primitives = []
     if style.plate:
         primitives.append({"type": "rect", "rect": [x, y, width, height], "color": style.plate_color, "opacity": style.plate_opacity, "role": "scale-background"})
-    bx = x + (width - length) / 2
+    def aligned_x(item_width):
+        return x + pad if style.text_align == "left" else x + width - pad - item_width if style.text_align == "right" else x + (width - item_width) / 2
+    bx = aligned_x(length + (thickness if style.endcaps else 0)) + (thickness / 2 if style.endcaps else 0)
     by = y + pad + cap + (th + style.gap if style.text_position == "above" else 0)
-    primitives.append({"type": "rect", "rect": [bx, by, length, thickness], "color": style.color, "role": "scale-bar"})
+    edge = {"outline_color": style.outline_color, "outline_width": outline} if outline else {}
+    primitives.append({"type": "rect", "rect": [bx, by, length, thickness], "color": style.color, "role": "scale-bar", **edge})
     if style.endcaps:
         for ex in (bx, bx + length):
-            primitives.append({"type": "rect", "rect": [ex - thickness / 2, by - cap, thickness, bar_height], "color": style.color, "role": "scale-endcap"})
+            primitives.append({"type": "rect", "rect": [ex - thickness / 2, by - cap, thickness, bar_height], "color": style.color, "role": "scale-endcap", **edge})
     ty = y + pad if style.text_position == "above" else by + thickness + cap + style.gap
-    tx = x + (width - tw) / 2
+    tx = aligned_x(tw)
     primitives.append({"type": "text", "text": label, "x": tx - text_bounds.left(), "y": ty - text_bounds.top(),
-                       "font": style.font, "size": font.pixelSize(), "bold": style.bold, "color": style.color, "role": "scale-label"})
+                       "font": style.font, "size": font.pixelSize(), "bold": style.bold, "color": style.color, "role": "scale-label", **edge})
     return primitives, [x, y, width, height], length
 
 
@@ -378,8 +392,14 @@ def paint_primitive(painter, primitive):
     painter.setPen(QPen(color, p.get("width", 1.)))
     painter.setBrush(Qt.BrushStyle.NoBrush)
     kind = p["type"]
+    outline = p.get("outline_width", 0.)
     if kind == "rect":
-        painter.fillRect(QRectF(*p["rect"]), color)
+        rect = QRectF(*p["rect"])
+        if outline:
+            # The outer bar edges keep the exact calibrated span.
+            painter.fillRect(rect, QColor(p["outline_color"]))
+            rect.adjust(outline, outline, -outline, -outline)
+        painter.fillRect(rect, color)
     elif kind in ("ellipse", "outline"):
         if kind == "ellipse":
             painter.drawEllipse(QRectF(*p["rect"]))
@@ -393,6 +413,10 @@ def paint_primitive(painter, primitive):
         # vary a handful of antialiased pixels between Windows processes.
         path = QPainterPath()
         path.addText(QPointF(p["x"], p["y"]), font, p["text"])
+        if outline:
+            pen = QPen(QColor(p["outline_color"]), 2 * outline)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            painter.strokePath(path, pen)
         painter.fillPath(path, color)
     elif kind == "path":
         path = QPainterPath()
@@ -459,9 +483,13 @@ def export_svg(path, comp):
             attrs = {"id": prefix + p.get("role", "annotation") + f"-{i}", "opacity": p.get("opacity", 1)}
             if p["type"] == "rect":
                 x, y, w, h = p["rect"]
-                element("rect", {**attrs, "x": x, "y": y, "width": w, "height": h, "fill": p["color"]}, group)
+                outline = p.get("outline_width", 0.)
+                element("rect", {**attrs, "x": x, "y": y, "width": w, "height": h, "fill": p["outline_color"] if outline else p["color"]}, group)
+                if outline:
+                    element("rect", {**attrs, "id": attrs["id"] + "-fill", "x": x + outline, "y": y + outline, "width": w - 2 * outline, "height": h - 2 * outline, "fill": p["color"]}, group)
             elif p["type"] == "text":
-                element("text", {**attrs, "x": p["x"], "y": p["y"], "font-family": p["font"], "font-size": p["size"], "font-weight": "bold" if p["bold"] else "normal", "fill": p["color"]}, group).text = p["text"]
+                edge = {"stroke": p["outline_color"], "stroke-width": 2 * p["outline_width"], "stroke-linejoin": "round", "paint-order": "stroke fill"} if p.get("outline_width") else {}
+                element("text", {**attrs, **edge, "x": p["x"], "y": p["y"], "font-family": p["font"], "font-size": p["size"], "font-weight": "bold" if p["bold"] else "normal", "fill": p["color"]}, group).text = p["text"]
             elif p["type"] in ("ellipse", "outline"):
                 x, y, w, h = p["rect"]
                 geometry = {"cx": x + w / 2, "cy": y + h / 2, "rx": w / 2, "ry": h / 2} if p["type"] == "ellipse" else {"x": x, "y": y, "width": w, "height": h}

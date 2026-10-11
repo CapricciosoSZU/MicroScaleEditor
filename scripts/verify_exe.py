@@ -13,7 +13,7 @@ root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
 from microscale import __version__
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--test-images", type=Path, action="append", help="Optional private image folder; repeat for multiple folders; detailed results stay local")
+parser.add_argument("--test-images", type=Path, action="append", help="Optional private image file or folder; repeat for multiple inputs; detailed results stay local")
 args = parser.parse_args()
 build_exe = root / "dist" / f"v{__version__}" / "MicroScaleEditor.exe"
 directory = root / "test-output" / ("portable \u72ec\u7acb\u68c0\u67e5 " + uuid4().hex[:8])

@@ -23,7 +23,7 @@ from .detection import build_masks, candidate_masks, detect, register
 from .geometry import (bounds, calibrate, distance, format_length, normalized_rect, output_geometry,
     parse_length, positive, suggestions, constrain_rect, rotation_angle, rotated_spacing, scale_calibration_message)
 from .image_io import Source, array_to_qimage, display_rgba, project_for, qimage_to_array, read_source
-from .model import Calibration, Crop, History, Project, Style, atomic_json, file_hash, load_project, relink_source, save_project
+from .model import Calibration, Crop, History, Project, Style, atomic_json, file_hash, load_project, relink_source, save_project, velox_style
 from .rendering import change_view, compose, export_file, inset_project, render_image
 from .runtime import runtime_dir, user_data_dir
 from . import __version__
@@ -118,7 +118,9 @@ class StyleForm(QWidget):
         specs = [("color", "Color", QLineEdit("#ffffff")), ("thickness", "Bar thickness (px)", number(5, .1)),
                  ("endcaps", "End ticks", QCheckBox()), ("font", "Font family", QLineEdit("Arial")),
                  ("font_size", "Font size (px)", number(22, 1)), ("bold", "Bold", QCheckBox()),
-                 ("text_position", "Text", combo(["above", "below"])), ("gap", "Text gap (px)", number(6, 0)),
+                 ("text_position", "Text", combo(["above", "below"])), ("text_align", "Text alignment", combo(["left", "center", "right"])), ("gap", "Text gap (px)", number(6, 0)),
+                 ("outline", "Outline bar and text", QCheckBox()), ("outline_color", "Outline color", QLineEdit("#000000")),
+                 ("outline_width", "Outline width (px)", number(2.5, .1)),
                  ("plate", "Background plate", QCheckBox()), ("plate_color", "Plate color", QLineEdit("#000000")),
                  ("plate_opacity", "Plate opacity", number(.8, 0, 1)),
                  ("anchor", "Position", combo([f"{v}-{h}" for v in ("top", "middle", "bottom") for h in ("left", "center", "right")] + ["custom"])),
@@ -127,7 +129,7 @@ class StyleForm(QWidget):
         advanced = QFormLayout(advanced_widget)
         advanced.setContentsMargins(0, 0, 0, 0)
         advanced.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
-        advanced_keys = {"endcaps", "font", "font_size", "bold", "text_position", "gap", "plate_color", "plate_opacity"}
+        advanced_keys = {"endcaps", "font", "font_size", "bold", "text_position", "text_align", "gap", "plate_color", "plate_opacity", "outline_color", "outline_width"}
         for key, label, control in specs:
             self.fields[key] = control
             (advanced if key in advanced_keys else self.layout).addRow(label, control)
@@ -159,7 +161,7 @@ class StyleForm(QWidget):
             else:
                 value = control.text()
             setattr(style, key, value)
-        for color in (style.color, style.plate_color):
+        for color in (style.color, style.plate_color, style.outline_color):
             if not QColor(color).isValid():
                 raise ValueError("Use a color name or #RRGGBB.")
         return style
@@ -494,7 +496,7 @@ class MainWindow(QMainWindow):
         self.scale_state.setObjectName("scaleCalibrationStatus")
         f.addRow(self.scale_state)
         f.addRow(self.button("Review calibration", lambda: self.properties.setCurrentIndex(0)))
-        self.preset = combo(["White", "Black", "White on dark plate"])
+        self.preset = combo(["Velox-style", "White", "Black", "White on dark plate"])
         f.addRow("Preset", self.preset)
         f.addRow(self.button("Use preset", self.apply_preset))
         self.quick_length = combo(["5 nm", "10 nm", "20 nm", "50 nm", "100 nm", "200 nm", "0.5 μm", "1 μm"])
@@ -1109,7 +1111,13 @@ class MainWindow(QMainWindow):
     def apply_preset(self):
         p = self.require_document()
         text = self.preset.currentText()
+        if text == "Velox-style":
+            _, _, size = output_geometry(p.crop, p.source_shape, p.output)
+            p.style = velox_style(size, enabled=p.style.enabled, length_nm=p.style.length_nm)
+            self.commit()
+            return
         p.style.color = "#000000" if text == "Black" else "#ffffff"
+        p.style.outline = False
         p.style.plate = text == "White on dark plate"
         p.style.plate_color = "#000000"
         self.commit()
@@ -1194,8 +1202,10 @@ class MainWindow(QMainWindow):
         for style in (p.style, p.inset.style):
             if p.output.mode == "print":
                 style.font_size = p.output.font_pt / 72 * p.output.dpi
-                style.thickness = p.output.line_pt / 72 * p.output.dpi
-            for key in ("font_size", "thickness", "gap", "margin", "x", "y"):
+                thickness = p.output.line_pt / 72 * p.output.dpi
+                style.outline_width *= thickness / positive(style.thickness, "Bar thickness")
+                style.thickness = thickness
+            for key in ("font_size", "thickness", "gap", "margin", "x", "y", "outline_width"):
                 setattr(style, key, getattr(style, key) * ratio)
         p.inset.x *= ratio
         p.inset.y *= ratio

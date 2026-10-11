@@ -50,6 +50,7 @@ def run_self_test(app, output_dir, test_images=None):
         frame = window.frameGeometry()
         check("Startup centered within usable screen", available.contains(frame) and (frame.center() - available.center()).manhattanLength() <= 2)
         check("Same as source is the default GUI export", window.export_kind.currentText() == "Same as source (original bit depth)")
+        check("Velox-style is the default for new images", window.document.project.style.outline and window.document.project.style.anchor == "bottom-left" and window.preset.currentText() == "Velox-style")
         example_dir = runtime_dir("examples")
         check("Examples outside extraction directory", str(getattr(sys, "_MEIPASS", "not-frozen")) not in str(example_dir))
         window.load_image(example_dir / "SYNTHETIC_50nm_250px.png")
@@ -81,6 +82,7 @@ def run_self_test(app, output_dir, test_images=None):
         settle()
         svg = (output_dir / "synthetic-result.svg").read_text(encoding="utf-8")
         check("SVG vector text and bar", "scale-bar" in svg and "<text" in svg)
+        check("SVG retains editable outlined lettering", 'paint-order="stroke fill"' in svg and 'stroke="#000000"' in svg)
         window.clipboard()
         settle()
         check("Full-resolution clipboard", QApplication.clipboard().image().size() == window.result_image.size())
@@ -164,7 +166,7 @@ def run_self_test(app, output_dir, test_images=None):
         check("GUI resolution preset doubles image and calibrated bar", window.composition.scale_length_px == 50 and p.style.font_size == original_font * 2 and window.result_image.size() == original_size * 2 and p.output.scale == 2)
         window.set_output_resolution(1)
         settle()
-        window.properties.setCurrentIndex(1)
+        window.properties.setCurrentIndex(2)
         window.view_tabs.setCurrentIndex(1)
         window.output_view.fit()
         window.notice.setText("Standalone verification passed. Synthetic input only; original pixels preserved.")
@@ -202,9 +204,12 @@ def validate_external_images(window, settle, input_dir, output_dir):
     """Read-only local corpus checks. Filenames and results are never uploaded."""
     from PIL import Image
     input_dir = input_dir.resolve()
-    files = sorted(p for p in input_dir.rglob("*") if p.is_file() and p.suffix.lower() in {".tif", ".tiff", ".png", ".jpg", ".jpeg"})
+    candidates = [input_dir] if input_dir.is_file() else input_dir.rglob("*")
+    files = sorted(p for p in candidates if p.is_file() and p.suffix.lower() in {".tif", ".tiff", ".png", ".jpg", ".jpeg"})
     if not files:
         raise ValueError("No supported images found in the supplied test folder.")
+    if input_dir.is_file():
+        input_dir = input_dir.parent
     output_dir.mkdir(parents=True, exist_ok=True)
     records = []
     ocr_seen = set()

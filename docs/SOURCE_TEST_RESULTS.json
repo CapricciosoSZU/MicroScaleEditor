@@ -1,9 +1,9 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "command": "python -m pytest -q",
-  "tests": 88,
+  "tests": 98,
   "failures": 0,
   "errors": 0,
   "skipped": 0,
-  "elapsed_seconds": 50.688
+  "elapsed_seconds": 42.656
 }

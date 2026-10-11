@@ -91,6 +91,19 @@ class Style:
     margin: float = 20.
     x: float = 20.
     y: float = 20.
+    outline: bool = False
+    outline_color: str = "#000000"
+    outline_width: float = 2.5
+    text_align: str = "center"
+
+
+def velox_style(size=(1024, 1024), *, enabled=False, length_nm=5.):
+    """Reference-inspired appearance only; physical length still needs calibration."""
+    factor = max(.25, min(size) / 1024.)
+    return Style(enabled=enabled, length_nm=length_nm, color="#ffffff", thickness=10 * factor,
+                 font="Arial", font_size=47 * factor, bold=False, text_position="above",
+                 text_align="left", gap=11 * factor, anchor="bottom-left", margin=12 * factor,
+                 outline=True, outline_color="#000000", outline_width=2.5 * factor)
 
 
 @dataclass

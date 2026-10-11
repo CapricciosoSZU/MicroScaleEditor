@@ -13,7 +13,7 @@ import tifffile
 from PySide6.QtGui import QImage
 
 from .geometry import UNITS
-from .model import Project, Crop, file_hash
+from .model import Project, Crop, file_hash, velox_style
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +76,8 @@ def read_source(path):
 def project_for(source):
     h, w = source.pixels.shape[:2]
     p = Project(source_path=source.path, source_hash=source.sha256, source_shape=list(source.pixels.shape), source_dtype=str(source.pixels.dtype), crop=Crop(rect=[0., 0., float(w), float(h)]))
+    p.style = velox_style((w, h))
+    p.inset.style = velox_style((p.inset.width, p.inset.width))
     if source.pixels.dtype == np.uint8:
         p.display_low, p.display_high = 0., 255.
     else:
