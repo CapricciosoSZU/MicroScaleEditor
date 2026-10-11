@@ -115,10 +115,11 @@ class StyleForm(QWidget):
         self.length = QLineEdit("5 nm")
         self.length.setObjectName("scaleLength")
         self.layout.addRow("Physical length", self.length)
+        self.layout.addRow("Label position", QLabel("Always above the bar"))
         specs = [("color", "Color", QLineEdit("#ffffff")), ("thickness", "Bar thickness (px)", number(5, .1)),
                  ("endcaps", "End ticks", QCheckBox()), ("font", "Font family", QLineEdit("Arial")),
                  ("font_size", "Font size (px)", number(22, 1)), ("bold", "Bold", QCheckBox()),
-                 ("text_position", "Text", combo(["above", "below"])), ("text_align", "Text alignment", combo(["left", "center", "right"])), ("gap", "Text gap (px)", number(6, 0)),
+                 ("text_align", "Text alignment", combo(["left", "center", "right"])), ("gap", "Text gap (px)", number(6, 0)),
                  ("outline", "Outline bar and text", QCheckBox()), ("outline_color", "Outline color", QLineEdit("#000000")),
                  ("outline_width", "Outline width (px)", number(2.5, .1)),
                  ("plate", "Background plate", QCheckBox()), ("plate_color", "Plate color", QLineEdit("#000000")),
@@ -129,7 +130,7 @@ class StyleForm(QWidget):
         advanced = QFormLayout(advanced_widget)
         advanced.setContentsMargins(0, 0, 0, 0)
         advanced.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
-        advanced_keys = {"endcaps", "font", "font_size", "bold", "text_position", "text_align", "gap", "plate_color", "plate_opacity", "outline_color", "outline_width"}
+        advanced_keys = {"endcaps", "font", "font_size", "bold", "text_align", "gap", "plate_color", "plate_opacity", "outline_color", "outline_width"}
         for key, label, control in specs:
             self.fields[key] = control
             (advanced if key in advanced_keys else self.layout).addRow(label, control)

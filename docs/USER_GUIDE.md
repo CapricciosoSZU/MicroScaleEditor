@@ -2,7 +2,7 @@
 
 [English](USER_GUIDE.md) · [简体中文（zh-CN）](USER_GUIDE.zh-CN.md) · [Project home](../README.md) · [Windows download](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest)
 
-Applies to **v0.2.1**. Manual revised **2026-10-11**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
+Applies to **v0.2.2**. Manual revised **2026-10-11**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
 
 MicroScale Editor prepares calibrated SEM/TEM real-space figures. It keeps original image arrays read-only and records cropping, annotation treatment, calibration, and styling separately. Work stays on your computer.
 
@@ -45,7 +45,7 @@ Download and run `MicroScaleEditor.exe`. No separate Python installation is need
 
 **Open image…** accepts PNG, JPEG, and supported single-page TIFF files, including LZW-compressed TIFF. To import several files in the same dialog, use **Ctrl+click**, **Shift+click**, or **Ctrl+A**. Imported images appear in the left-hand list. Click a list item to work on that image.
 
-Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.1. Large groups retain their full source arrays in memory; use smaller groups if needed.
+Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.2. Large groups retain their full source arrays in memory; use smaller groups if needed.
 
 | Area | Purpose |
 |---|---|
@@ -164,7 +164,7 @@ The evidence panel compares proposed values against earlier evidence using **Rev
 
 The app calculates the bar's width from calibration. You do not draw its width freehand. To change the represented length, edit **Physical length** and apply again. To hide it, uncheck **Draw a physical scale bar** and apply.
 
-**Velox-style** follows the Thermo Fisher Velox appearance in the supplied reference. Initial font, bar, outline, and margin sizes scale with the image size. Existing saved projects and templates retain their previous appearance. Applying the preset preserves the current physical length and calibration; it does not automatically enable a bar or confirm calibration. The black bar border lies inside the calibrated outer edges: measure the full outer span, not just the inner white portion.
+**Velox-style** follows the Thermo Fisher Velox appearance in the supplied reference. Initial font, bar, outline, and margin sizes scale with the image size. Existing saved projects and templates retain their other appearance settings; labels always appear above the bar, including when loading a legacy `below` setting. Applying the preset preserves the current physical length and calibration; it does not automatically enable a bar or confirm calibration. The black bar border lies inside the calibrated outer edges: measure the full outer span, not just the inner white portion.
 
 ![Velox-style scale bar on a synthetic gradient](images/velox-style.png)
 
@@ -187,12 +187,13 @@ Double-click the bar/label group in the edit view to enter a new physical length
 | **Background plate** | Add a plate behind the new bar and label |
 | **Outline bar and text** | Enable an outline around the lettering and inside the bar; no rectangular background plate is needed |
 | **Outline color / Outline width (px)** | Set the outline appearance in the expanded details; width must be less than half the bar thickness and length |
+| **Label position** | **Always above the bar**; fixed in main images, insets, previews, clipboard, and exports. Legacy `below` settings load as `above` |
 | **Text alignment** | Align label and bar left, center, or right within their shared group |
-| **Font, end ticks and background details** | Expand for **End ticks**, **Font family**, **Font size (px)**, **Bold**, **Text** (`above`/`below`), **Text gap (px)**, **Plate color**, and **Plate opacity** |
+| **Font, end ticks and background details** | Expand for **End ticks**, **Font family**, **Font size (px)**, **Bold**, **Text gap (px)**, **Plate color**, and **Plate opacity** |
 
 After editing these controls, click **Apply style / length**. In **print** output mode, font size and bar thickness use **Export → Print font / bar (pt)** instead of the pixel fields. Available font families depend on the computer.
 
-In print mode the outline scales with the bar thickness. The **2× / 4×** resolution buttons also scale outline width with the rest of the layout. Outlines are retained in preview, PNG, annotated TIFF/source-format exports, clipboard, and editable SVG text. Plain White/Black presets turn outlining off. Use v0.2.1 or later to reopen projects or templates saved with the new outline fields.
+In print mode the outline scales with the bar thickness. The **2× / 4×** resolution buttons also scale outline width with the rest of the layout. Outlines are retained in preview, PNG, annotated TIFF/source-format exports, clipboard, and editable SVG text. Plain White/Black presets turn outlining off. Use v0.2.2 or later to reopen projects or templates saved with the new outline fields.
 
 **Save template… / Load template…** store and restore bar styles. **Copy settings… / Paste settings** transfer selected styles/output settings between open images. Calibration is excluded by default. If explicitly copied, it becomes **Pending** and must be reviewed for the destination image.
 
@@ -362,11 +363,11 @@ Canvas shortcuts require canvas focus; they do not apply while typing in a form 
 | The old bar remains | A new bar does not erase existing pixels. Review the old-annotation treatment and include both its line and text |
 | Dragging seems ineffective | Switch from **Output pixel preview** to **Edit • source coordinates**, choose the intended tool, and apply pending form values |
 | A float/16-bit TIFF looks dark or low contrast | Review **Source → Display mapping**. Use data TIFF export to preserve the original values rather than relying on the 8-bit preview |
-| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.1). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
+| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.2). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
 | Reference transfer is disabled or rejected | Verify actual matching content and registration; review point pairs/overlap. Unsupported distortion or a different field of view cannot be fixed by matching filenames |
 | An exported TIFF has no visible bar | **TIFF data only** intentionally excludes annotations. Choose the default **Same as source (original bit depth)** for a source-precision TIFF with a bar, or another presentation format |
 | Opening many files uses too much memory | Work in smaller groups; all imported sources retain full-resolution arrays. There is no batch export queue |
-| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.1. Centering happens on initial show, not after every manual move |
+| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.2. Centering happens on initial show, not after every manual move |
 
 <a id="scope-and-help"></a>
 ## 13. Supported scope and further help

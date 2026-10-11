@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QApplication
 
 from .gui import MainWindow
 from .image_io import read_source, project_for, display_rgba, qimage_to_array
-from .model import load_project, file_hash, Crop
+from .model import load_project, file_hash, Crop, Project
 from .rendering import compose, data_crop, export_file
 from .runtime import frozen, runtime_dir, user_data_dir
 
@@ -75,6 +75,15 @@ def run_self_test(app, output_dir, test_images=None):
         window.apply_style()
         settle()
         check("Scale geometry 25 px", abs(window.composition.scale_length_px - 25) < .1)
+        legacy = p.to_dict()
+        legacy["style"]["text_position"] = legacy["inset"]["style"]["text_position"] = "below"
+        normalized = Project.from_dict(legacy)
+        check("Legacy main/inset labels normalize above", normalized.style.text_position == normalized.inset.style.text_position == "above")
+        normalized.style.text_position = "below"
+        fixed = compose(window.document.rgba, normalized)
+        fixed_bar = next(v for v in fixed.primitives if v.get("role") == "scale-bar")
+        fixed_text = next(v for v in fixed.primitives if v.get("role") == "scale-label")
+        check("Label stays above regardless of legacy state", fixed_text["y"] < fixed_bar["rect"][1])
         window.start_export(str(output_dir / "synthetic-result.png"))
         settle()
         check("PNG export", (output_dir / "synthetic-result.png").is_file())

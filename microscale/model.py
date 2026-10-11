@@ -96,6 +96,10 @@ class Style:
     outline_width: float = 2.5
     text_align: str = "center"
 
+    def __post_init__(self):
+        # Accept the legacy field in projects/templates, with one label layout.
+        self.text_position = "above"
+
 
 def velox_style(size=(1024, 1024), *, enabled=False, length_nm=5.):
     """Reference-inspired appearance only; physical length still needs calibration."""

@@ -556,3 +556,29 @@ def test_velox_preset_template_and_legacy_switch(window, examples, tmp_path, mon
     settled(window)
     assert window.document.project.style == style
     assert window.composition.scale_length_px == 250
+
+
+def test_legacy_below_template_applies_above_in_both_previews(window, examples, tmp_path, monkeypatch):
+    import json
+    from dataclasses import asdict
+    from PySide6.QtWidgets import QLabel, QPushButton
+    open_clean(window, examples)
+    calibrate_manual(window)
+    calibration = deepcopy(window.document.project.calibration)
+    style = asdict(window.document.project.style)
+    style.update(enabled=True, length_nm=50, text_position="below")
+    template = tmp_path / "legacy-below.json"
+    template.write_text(json.dumps({"style_template_version": 1, "style": style}), encoding="utf-8")
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(template), ""))
+    window.load_template()
+    assert "text_position" not in window.scale_form.fields
+    assert any(label.text() == "Always above the bar" for label in window.scale_form.findChildren(QLabel))
+    next(b for b in window.findChildren(QPushButton) if b.text() == "Apply style / length").click()
+    settled(window)
+    assert window.document.project.style.text_position == "above"
+    assert window.document.project.calibration == calibration
+    bar = next(v for v in window.composition.primitives if v.get("role") == "scale-bar")
+    label = next(v for v in window.composition.primitives if v.get("role") == "scale-label")
+    assert label["y"] < bar["rect"][1]
+    for item in (window.canvas.result_item, window.output_view.image_item):
+        np.testing.assert_array_equal(qimage_to_array(item.pixmap().toImage()), qimage_to_array(window.result_image))

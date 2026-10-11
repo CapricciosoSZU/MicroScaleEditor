@@ -1,8 +1,8 @@
 {
-  "version": "0.2.1",
+  "version": "0.2.2",
   "executable": "MicroScaleEditor.exe",
-  "sha256": "bb581fd24afeaab8e4b98e7cf336e9a638418245f307a4c341fbcf0fd9c1e20e",
-  "size_bytes": 154239668,
+  "sha256": "f7dbaaebe67dd2955df2616973a067749339d33ff4fdd31345bc924053b2e4de",
+  "size_bytes": 154241291,
   "status": "passed",
   "frozen": true,
   "synthetic_inputs_only": false,
@@ -16,6 +16,8 @@
     "Examples outside extraction directory",
     "Bundled local OCR recognizes 50 nm / 250 px",
     "Scale geometry 25 px",
+    "Legacy main/inset labels normalize above",
+    "Label stays above regardless of legacy state",
     "PNG export",
     "SVG vector text and bar",
     "SVG retains editable outlined lettering",
@@ -40,7 +42,7 @@
     "GUI resolution preset doubles image and calibrated bar",
     "All supplied local images passed"
   ],
-  "check_elapsed_seconds": 271.14,
+  "check_elapsed_seconds": 274.099,
   "private_images": {
     "count": 130,
     "passed": 130,

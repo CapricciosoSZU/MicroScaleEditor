@@ -174,13 +174,13 @@ def scale_primitives(style, calibration, k, size, output):
     def aligned_x(item_width):
         return x + pad if style.text_align == "left" else x + width - pad - item_width if style.text_align == "right" else x + (width - item_width) / 2
     bx = aligned_x(length + (thickness if style.endcaps else 0)) + (thickness / 2 if style.endcaps else 0)
-    by = y + pad + cap + (th + style.gap if style.text_position == "above" else 0)
+    by = y + pad + cap + th + style.gap
     edge = {"outline_color": style.outline_color, "outline_width": outline} if outline else {}
     primitives.append({"type": "rect", "rect": [bx, by, length, thickness], "color": style.color, "role": "scale-bar", **edge})
     if style.endcaps:
         for ex in (bx, bx + length):
             primitives.append({"type": "rect", "rect": [ex - thickness / 2, by - cap, thickness, bar_height], "color": style.color, "role": "scale-endcap", **edge})
-    ty = y + pad if style.text_position == "above" else by + thickness + cap + style.gap
+    ty = y + pad
     tx = aligned_x(tw)
     primitives.append({"type": "text", "text": label, "x": tx - text_bounds.left(), "y": ty - text_bounds.top(),
                        "font": style.font, "size": font.pixelSize(), "bold": style.bold, "color": style.color, "role": "scale-label", **edge})
