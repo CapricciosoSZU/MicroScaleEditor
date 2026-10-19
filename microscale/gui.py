@@ -26,6 +26,7 @@ from .image_io import Source, array_to_qimage, display_rgba, project_for, qimage
 from .model import Calibration, Crop, History, Project, Style, atomic_json, file_hash, load_project, relink_source, save_project, velox_style
 from .rendering import change_view, compose, export_file, inset_project, render_image
 from .runtime import runtime_dir, user_data_dir
+from .theme import apply_dark_theme
 from . import __version__
 
 log = logging.getLogger(__name__)
@@ -171,6 +172,7 @@ class StyleForm(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        apply_dark_theme(QApplication.instance())
         self.setWindowTitle(f"MicroScale Editor {__version__}")
         self.resize(1480, 920)
         self._startup_positioned = False
@@ -347,7 +349,6 @@ class MainWindow(QMainWindow):
         action = QAction("Coordinate and pixel rules", self)
         action.triggered.connect(lambda: QMessageBox.information(self, "Measurement rules", "Solid bars use outer pixel edges [x, x + width). Tick bars use tick centerlines. Inspect antialiasing at 50% local contrast.\n\nAll ROI/mask/measurement geometry is stored in source pixels. Scale styles use output pixels. Print fonts/lines use pt. Wheel zoom and monitor DPI never change sample calibration.\n\nPolygon: click vertices; Enter/right-click closes; edit by dragging vertices; Ctrl-click inserts; Delete removes. Middle mouse pans. Hold B compares original/result at identical geometry.\n\nMasks cannot recover covered sample pixels. Opaque coverage is an annotation, not restoration."))
         help_menu.addAction(action)
-        self.setStyleSheet("QMainWindow, QDialog {background:#202630; color:#e6edf5;} QLabel,QCheckBox,QGroupBox {color:#e6edf5;} QTabWidget::pane {border:1px solid #455162;} QPushButton {padding:5px 8px;} QLineEdit,QDoubleSpinBox,QSpinBox,QComboBox,QListWidget,QPlainTextEdit {min-height:23px;} QGroupBox {margin-top:12px; padding-top:14px;}")
 
     def _tab(self, title):
         scroll = QScrollArea()

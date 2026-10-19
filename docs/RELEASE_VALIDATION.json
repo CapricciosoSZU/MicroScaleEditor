@@ -1,14 +1,16 @@
 {
-  "version": "0.2.3",
+  "version": "0.2.4",
   "executable": "MicroScaleEditor.exe",
-  "sha256": "5625b4ea50d8d40d8b71700e837c9d8f7c5f66153d73b06cbeee9ef18427cdeb",
-  "size_bytes": 154244116,
+  "sha256": "4d04170ea30d2a50123f00cd05c0a8de0c8b687deb85649cd02807db843f5040",
+  "size_bytes": 154246461,
   "status": "passed",
   "frozen": true,
   "synthetic_inputs_only": false,
   "python_removed_from_path": true,
   "separate_unicode_directory": true,
   "checks": [
+    "Readable application theme from light system palette",
+    "Readable application theme from dark system palette",
     "GUI startup and persistent synthetic examples",
     "Startup centered within usable screen",
     "Same as source is the default GUI export",
@@ -44,22 +46,21 @@
     "GUI resolution preset doubles image and calibrated bar",
     "All supplied local images passed"
   ],
-  "check_elapsed_seconds": 242.983,
+  "check_elapsed_seconds": 150.718,
   "private_images": {
-    "count": 130,
-    "passed": 130,
+    "count": 59,
+    "passed": 59,
     "compression_counts": {
-      "NONE": 66,
-      "PNG/JPEG": 33,
-      "LZW": 31
+      "PNG/JPEG": 28,
+      "LZW": 30,
+      "NONE": 1
     },
     "dataset_counts": {
-      "1": 71,
-      "2": 58,
-      "3": 1
+      "1": 58,
+      "2": 1
     },
     "dtype_counts": {
-      "uint8": 100,
+      "uint8": 29,
       "float32": 30
     },
     "images_and_filenames_published": false

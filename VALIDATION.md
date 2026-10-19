@@ -1,15 +1,16 @@
 # Validation record
 
-Date: **2026-10-11**. Version: **0.2.3**. Platform: local Windows x64.
+Date: **2026-10-19**. Version: **0.2.4**. Platform: local Windows x64.
 
-The source suite passed **114 tests in 58.30 seconds**, with no skipped tests. The final frozen EXE passed **33 general checks plus the complete 130-image corpus check** (34 top-level checks) in **242.98 seconds**, from a separate Unicode directory with Python/Conda variables removed and PATH restricted to Windows System32. Every supplied supported image passed GUI loading, independent decoding comparison, PNG export, project save/load, exact native TIFF cropping, source-format export with original bit depth, and unchanged source hashes. Lossless source-format crops matched the source samples exactly; JPEG is re-encoded. The exact binary hash and completed results are recorded in `docs/RELEASE_VALIDATION.json`.
+The source suite passed **116 tests in 93.51 seconds**, with no skipped tests. The final frozen EXE passed **35 general checks plus the complete 59-image corpus check** (36 top-level checks) in **150.72 seconds**, from a separate Unicode directory with Python/Conda variables removed and PATH restricted to Windows System32. Every image in this run passed GUI loading, independent decoding comparison, PNG export, project save/load, exact native TIFF cropping, source-format export with original bit depth, and unchanged source hashes. Lossless source-format crops matched the source samples exactly; JPEG is re-encoded. The exact binary hash and completed results are recorded in `docs/RELEASE_VALIDATION.json`.
 
-Public examples are explicitly **synthetic**. Private validation covers **130 images** from the two previously supplied SEM/TEM folders and the supplied 4096 × 4096 uint8 TIFF style reference. It includes LZW-compressed float32 TEM images. The reference appearance was inspected locally; only a synthetic style illustration is distributed. Input files, filenames, detailed logs, and real-image screenshots remain local. Another physical computer and a clean Windows VM remain untested. Successful import and appearance matching do not establish calibration accuracy.
+Public examples are explicitly **synthetic**. Private validation for this binary covers **59 images**: 58 images from the previously supplied TEM folder and the supplied 4096 × 4096 uint8 TIFF style reference. The original 71-image SEM folder is no longer available at its supplied location and was not rerun for v0.2.4; its last complete frozen validation was in v0.2.3 (130 images total). It includes LZW-compressed float32 TEM images. The reference appearance was inspected locally; only a synthetic style illustration is distributed. Input files, filenames, detailed logs, and real-image screenshots remain local. Another physical computer and a clean Windows VM remain untested. Successful import and appearance matching do not establish calibration accuracy.
 
 ## Source acceptance coverage
 
 | Area | Observed result |
 |---|---|
+| Application theme | Light/dark startup palettes, all property tabs, painted image-list pixels, menus, combo popups, progress, top-level Qt dialogs, and active/inactive/disabled/selected/placeholder text pass. Tested foreground/background palette pairs meet a 4.5:1 contrast ratio |
 | Calibration | 50 nm / 250 px gives 0.2 nm/px; 5 nm produces 25 px geometry and the expected rendered bar cross-section |
 | Output scale | 1×/2×/4× GUI presets preserve physical length and scale annotation layout; a 5 nm bar grows from 25 to 50 to 100 output pixels |
 | Label placement | Labels always sit above main and inset bars. Legacy below settings normalize on project/template load; both GUI previews, end ticks, outlined/plain text, print mode, PNG, and editable SVG pass |
@@ -41,7 +42,7 @@ Additional checks cover calibration conflicts without averaging, square-pixel as
 
 ## Actual EXE checks
 
-The self-test retains the following 11 original checks, plus centered startup and four LZW dtype/channel regressions (uint8 gray, uint16 gray, RGBA, float32 with floating-point prediction). Seven added checks cover exact quarter-turn samples, crop/calibration retention, rotated dimensions, custom-angle bar placement, preview/export agreement, saved rotation, and endpoint feedback. Four more verify the default source format, 2× annotated uint16 PNG and float32 TIFF precision, and the GUI resolution preset. Two further checks verify the default Velox-style appearance and editable SVG outlines. Two label-placement checks verify legacy main/inset settings and fixed rendering above the bar. Two Shift-drag checks verify horizontal source endpoints and the retained calibration-review requirement. The private corpus adds one top-level aggregate check.
+The self-test retains the following 11 original checks, plus centered startup and four LZW dtype/channel regressions (uint8 gray, uint16 gray, RGBA, float32 with floating-point prediction). Seven added checks cover exact quarter-turn samples, crop/calibration retention, rotated dimensions, custom-angle bar placement, preview/export agreement, saved rotation, and endpoint feedback. Four more verify the default source format, 2× annotated uint16 PNG and float32 TIFF precision, and the GUI resolution preset. Two further checks verify the default Velox-style appearance and editable SVG outlines. Two label-placement checks verify legacy main/inset settings and fixed rendering above the bar. Two Shift-drag checks verify horizontal source endpoints and the retained calibration-review requirement. Two theme checks verify readable application panels from injected light/dark startup palettes and save screenshots. The private corpus adds one top-level aggregate check.
 
 1. Start a Qt window and generate persistent synthetic examples.
 2. Verify examples live outside the one-file extraction directory.
@@ -55,7 +56,7 @@ The self-test retains the following 11 original checks, plus centered startup an
 10. Preserve the input image hash.
 11. Export an exact native 16-bit TIFF crop.
 
-Local reports are under `test-output`, intentionally excluded from Git. A checked screenshot is included at `docs/images/editor.png`.
+Local reports are under `test-output`, intentionally excluded from Git. A checked screenshot is included at `docs/images/editor.png`. Theme startup screenshots were also inspected locally. Theme tests inject palettes through Qt without changing Windows personalization; live Windows theme switching and native Windows file-picker appearance were not automated.
 
 ## Environment and reproduction
 
@@ -71,7 +72,7 @@ Local reports are under `test-output`, intentionally excluded from Git. A checke
 .\.venv\Scripts\python.exe scripts\verify_exe.py
 ```
 
-The 114 tests include real Qt mouse/keyboard events, independent recipe processes, compression decoding, scientific precision comparisons, and geometry checks. The GUI export regression uses the default format dialog, verifies 2×/4× annotation layout and dimensions, checks undo, and decodes the resulting 16-bit TIFF. Nine style cases and one additional GUI case cover outlined geometry and preset/template compatibility. Ten additional cases cover fixed label placement and legacy template/project compatibility. Six further GUI cases cover Shift-constrained endpoint interaction. Event processing is interleaved with waits that release the Python GIL so workers can complete.
+The 116 tests include real Qt mouse/keyboard events, independent recipe processes, compression decoding, scientific precision comparisons, and geometry checks. The GUI export regression uses the default format dialog, verifies 2×/4× annotation layout and dimensions, checks undo, and decodes the resulting 16-bit TIFF. Nine style cases and one additional GUI case cover outlined geometry and preset/template compatibility. Ten additional cases cover fixed label placement and legacy template/project compatibility. Six further GUI cases cover Shift-constrained endpoint interaction. Two additional GUI cases cover theme inheritance and contrast. Event processing is interleaved with waits that release the Python GIL so workers can complete.
 
 ## Performance and limits
 

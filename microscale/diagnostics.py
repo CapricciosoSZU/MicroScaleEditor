@@ -10,7 +10,7 @@ import traceback
 import numpy as np
 import tifffile
 from PySide6.QtCore import QSettings, QPointF, Qt, QEvent
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QColor, QMouseEvent, QPalette
 from PySide6.QtWidgets import QApplication
 
 from .gui import MainWindow
@@ -18,6 +18,40 @@ from .image_io import read_source, project_for, display_rgba, qimage_to_array
 from .model import load_project, file_hash, Crop, Project
 from .rendering import compose, data_crop, export_file
 from .runtime import frozen, runtime_dir, user_data_dir
+
+
+def check_theme_startup(app, output_dir, scheme):
+    """Inject a light/dark platform palette locally without changing Windows settings."""
+    app.setStyleSheet("")
+    app.styleHints().setColorScheme(scheme)
+    inherited = QPalette()
+    background, foreground = ("#ffffff", "#000000") if scheme == Qt.ColorScheme.Light else ("#202020", "#eeeeee")
+    for role in (QPalette.ColorRole.Window, QPalette.ColorRole.Base, QPalette.ColorRole.Button):
+        inherited.setColor(role, QColor(background))
+    for role in (QPalette.ColorRole.WindowText, QPalette.ColorRole.Text, QPalette.ColorRole.ButtonText):
+        inherited.setColor(role, QColor(foreground))
+    app.setPalette(inherited)
+    probe = MainWindow()
+    probe.settings = QSettings(str(output_dir / "theme-settings.ini"), QSettings.Format.IniFormat)
+    probe.recovery_dir = output_dir / "theme-recovery"
+    try:
+        probe.show()
+        app.processEvents()
+        passed = app.styleHints().colorScheme() == Qt.ColorScheme.Dark
+        for index in range(probe.properties.count()):
+            probe.properties.setCurrentIndex(index)
+            app.processEvents()
+            panel = probe.properties.widget(index).widget()
+            passed &= panel.palette().color(QPalette.ColorRole.Window).lightnessF() < .3
+            passed &= panel.palette().color(QPalette.ColorRole.WindowText).lightnessF() > .7
+            if index in (0, 2):
+                probe.grab().save(str(output_dir / f"theme-{scheme.name.lower()}-{index}.png"))
+        pixels = probe.image_list.viewport().grab().toImage()
+        passed &= pixels.pixelColor(pixels.width() // 2, pixels.height() // 2).lightnessF() < .3
+        return passed
+    finally:
+        probe.close()
+        app.processEvents()
 
 
 def run_self_test(app, output_dir, test_images=None):
@@ -44,6 +78,8 @@ def run_self_test(app, output_dir, test_images=None):
                 raise TimeoutError("Packaged background work timed out: " + window.notice.text())
         app.processEvents()
     try:
+        for scheme in (Qt.ColorScheme.Light, Qt.ColorScheme.Dark):
+            check(f"Readable application theme from {scheme.name.lower()} system palette", check_theme_startup(app, output_dir, scheme))
         window.open_examples()
         settle()
         check("GUI startup and persistent synthetic examples", window.document is not None and window.composition is not None)

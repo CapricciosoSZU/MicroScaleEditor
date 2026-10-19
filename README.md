@@ -12,6 +12,8 @@ Crop images, review calibration evidence, edit scale-bar annotations, create lin
 
 ## Features
 
+- **Consistent dark interface:** image lists, property panels, menus, controls, and Qt dialogs share an application palette, including when Windows uses light mode.
+
 - **Calibration with evidence:** manual sample spacing, endpoint measurements, OME-TIFF physical sizes, local OCR candidates, and transfer from a matching reference. Calibration remains pending until reviewed and confirmed.
 - **Shift-constrained calibration:** hold Shift while drawing or moving a calibration endpoint to keep the reference line horizontal. Release Shift for free placement.
 - **Image rotation:** 90° left/right, 180°, and custom clockwise angles, with expanded output, horizontal scale labels, recorded transforms, and exact native quarter-turn data exports.
@@ -50,9 +52,9 @@ Example only: an existing **50 nm / 250 px** bar establishes **0.2 nm/px**. A ne
 
 ### Manuals / 使用手册
 
-Both manuals cover the same v0.2.3 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
+Both manuals cover the same v0.2.4 workflows, including calibration, scale bars, multiple-image import, crops, old annotations, insets, export formats, recovery, and troubleshooting. The Chinese manual retains the English control names used in the application.
 
-两份手册适用于 v0.2.3，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
+两份手册适用于 v0.2.4，覆盖相同功能。中文手册保留软件的英文按钮名称，方便对照操作；软件界面仍为英文。
 
 | Task / 操作 | English | 简体中文 |
 |---|---|---|
@@ -62,7 +64,7 @@ Both manuals cover the same v0.2.3 workflows, including calibration, scale bars,
 | Rotation / 图像旋转 | [Controls and calibration](docs/USER_GUIDE.md#image-rotation) | [操作与校准](docs/USER_GUIDE.zh-CN.md#image-rotation) |
 | Troubleshooting / 常见问题 | [Find a fix](docs/USER_GUIDE.md#troubleshooting) | [排查问题](docs/USER_GUIDE.zh-CN.md#troubleshooting) |
 
-The **v0.2.3** portable ZIP includes both updated manuals. For rotation, use **Crop → Image rotation** and inspect **Output pixel preview**. Source editing remains in original coordinates. Custom-angle calibrated bars need confirmed equal x/y spacing; quarter turns exchange the source axes as appropriate.
+The **v0.2.4** portable ZIP includes both updated manuals. For rotation, use **Crop → Image rotation** and inspect **Output pixel preview**. Source editing remains in original coordinates. Custom-angle calibrated bars need confirmed equal x/y spacing; quarter turns exchange the source axes as appropriate.
 
 ## Export formats
 
