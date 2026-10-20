@@ -2,7 +2,7 @@
 
 [English](USER_GUIDE.md) · [简体中文（zh-CN）](USER_GUIDE.zh-CN.md) · [Project home](../README.md) · [Windows download](https://github.com/CapricciosoSZU/MicroScaleEditor/releases/latest)
 
-Applies to **v0.2.4**. Manual revised **2026-10-19**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
+Applies to **v0.2.5**. Manual revised **2026-10-20**. The application interface is English; bold names below match its controls. Numerical examples are illustrative, not measurements of your images.
 
 The editor uses a consistent dark interface regardless of the Windows light/dark setting. Image lists, property panels, menus, inputs, and Qt dialogs share readable colors. Native Windows file pickers and window decorations remain managed by Windows. This changes only the interface, not image pixels, scale-bar colors, or export appearance.
 
@@ -47,7 +47,7 @@ Download and run `MicroScaleEditor.exe`. No separate Python installation is need
 
 **Open image…** accepts PNG, JPEG, and supported single-page TIFF files, including LZW-compressed TIFF. To import several files in the same dialog, use **Ctrl+click**, **Shift+click**, or **Ctrl+A**. Imported images appear in the left-hand list. Click a list item to work on that image.
 
-Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.4. Large groups retain their full source arrays in memory; use smaller groups if needed.
+Each image has its own calibration and edits. Importing a group does not calibrate all of them or export them together. **Export is per image** in v0.2.5. Large groups retain their full source arrays in memory; use smaller groups if needed.
 
 | Area | Purpose |
 |---|---|
@@ -195,7 +195,7 @@ Double-click the bar/label group in the edit view to enter a new physical length
 
 After editing these controls, click **Apply style / length**. In **print** output mode, font size and bar thickness use **Export → Print font / bar (pt)** instead of the pixel fields. Available font families depend on the computer.
 
-In print mode the outline scales with the bar thickness. The **2× / 4×** resolution buttons also scale outline width with the rest of the layout. Outlines are retained in preview, PNG, annotated TIFF/source-format exports, clipboard, and editable SVG text. Plain White/Black presets turn outlining off. Use v0.2.4 or later to reopen projects or templates saved with the new outline fields.
+In print mode the outline scales with the bar thickness. The **2× / 4×** resolution buttons also scale outline width with the rest of the layout. Outlines are retained in preview, PNG, annotated TIFF/source-format exports, clipboard, and editable SVG text. Plain White/Black presets turn outlining off. Use v0.2.5 or later to reopen projects or templates saved with the new outline fields.
 
 **Save template… / Load template…** store and restore bar styles. **Copy settings… / Paste settings** transfer selected styles/output settings between open images. Calibration is excluded by default. If explicitly copied, it becomes **Pending** and must be reviewed for the destination image.
 
@@ -205,8 +205,10 @@ In print mode the outline scales with the bar thickness. The **2× / 4×** resol
 1. Open **Crop**. Choose **Shape**: `rectangle`, `square`, `circle`, `ellipse`, `polygon`, or `freehand`.
 2. Choose **Aspect W:H** if needed. `Custom` uses the value in **Custom W:H**. A fixed ratio changes the crop; it does not stretch the specimen.
 3. Use **Draw crop** in the edit view. For rectangular/elliptical shapes, drag the region. For a polygon, click vertices and press **Enter** or right-click to close. Freehand closes when you release the mouse.
-4. Select **Edit crop** in the toolbar to move the region or adjust its handles. For numeric rectangular geometry, edit **Source x / y** and **Width / height**, then **Apply geometry**.
+4. Drawing automatically switches the toolbar to **Edit crop**. Drag inside the selection to move it. Drag a rectangle edge/corner or an ellipse/circle handle to resize it; square/circle and fixed aspect ratios stay locked. The pointer shows the available action. For numeric rectangular geometry, edit **Source x / y** and **Width / height**, then **Apply geometry**.
 5. Choose **Outside shape** (`transparent`, `white`, `black`, or `custom`) and click **Apply background**.
+
+To replace a selection, click **Draw crop** again, then draw the new region (including inside the previous selection). Press **Esc** during a drag to cancel that gesture. **Undo / Redo** restores completed moves and resizes. Moving stays within the source image and does not change confirmed calibration.
 
 For polygon/freehand crops, drag vertices to edit them, Ctrl+click to insert a vertex, and Delete to remove the selected vertex. Keep at least three non-crossing vertices. Nonrectangular exports use the crop's bounding rectangle; the outside area follows the chosen background. The preview checkerboard is not exported.
 
@@ -356,7 +358,7 @@ Canvas shortcuts require canvas focus; they do not apply while typing in a form 
 
 | Symptom | What to check |
 |---|---|
-| Pale labels on white side panels in Windows light mode | Close the older instance and launch v0.2.4 or later. The editor now uses its own complete dark palette; changing Windows to dark mode is unnecessary. |
+| Pale labels on white side panels in Windows light mode | Close the older instance and launch v0.2.5 or later. The editor now uses its own complete dark palette; changing Windows to dark mode is unnecessary. |
 | No new bar appears | Read the live message above the scale controls and use **Review calibration**; confirm spacing for the rotated horizontal direction; check **Draw a physical scale bar**; click **Apply style / length**; use a contrasting color and inspect export issues |
 | Calibration is still **Pending** | Click **Use endpoints** or **Use manual calibration**, review evidence, then **Confirm calibration**; resolve a reported evidence conflict if needed |
 | “An oblique segment…” error | Hold Shift while drawing or adjusting calibration endpoints, or enter equal y values for a horizontal reference; use square pixels only when justified |
@@ -366,11 +368,11 @@ Canvas shortcuts require canvas focus; they do not apply while typing in a form 
 | The old bar remains | A new bar does not erase existing pixels. Review the old-annotation treatment and include both its line and text |
 | Dragging seems ineffective | Switch from **Output pixel preview** to **Edit • source coordinates**, choose the intended tool, and apply pending form values |
 | A float/16-bit TIFF looks dark or low contrast | Review **Source → Display mapping**. Use data TIFF export to preserve the original values rather than relying on the 8-bit preview |
-| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.4). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
+| `COMPRESSION.LZW` requires `imagecodecs` | Close the old application and run the current EXE (v0.2.5). For a source install, update runtime requirements with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` |
 | Reference transfer is disabled or rejected | Verify actual matching content and registration; review point pairs/overlap. Unsupported distortion or a different field of view cannot be fixed by matching filenames |
 | An exported TIFF has no visible bar | **TIFF data only** intentionally excludes annotations. Choose the default **Same as source (original bit depth)** for a source-precision TIFF with a bar, or another presentation format |
 | Opening many files uses too much memory | Work in smaller groups; all imported sources retain full-resolution arrays. There is no batch export queue |
-| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.4. Centering happens on initial show, not after every manual move |
+| Window seems to use the old startup position | Check the version in the title bar, close the old instance, then launch v0.2.5. Centering happens on initial show, not after every manual move |
 
 <a id="scope-and-help"></a>
 ## 13. Supported scope and further help

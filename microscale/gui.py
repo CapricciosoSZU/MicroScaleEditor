@@ -471,7 +471,7 @@ class MainWindow(QMainWindow):
         rotation_hint.setWordWrap(True)
         rotation_layout.addRow(rotation_hint)
         f.addRow(rotation)
-        hint = QLabel("Polygon: click points; Enter/right-click closes. Edit crop: drag corners/vertices or move inside. Ctrl-click adds a vertex; Delete removes it. Freehand closes on release.")
+        hint = QLabel("After drawing, drag inside to move the crop; drag edges/corners to resize. Click Draw crop to replace it. Polygon: Enter/right-click closes; drag vertices to adjust, Ctrl-click adds, Delete removes. Freehand closes on release.")
         hint.setWordWrap(True)
         f.addRow(hint)
         inset = QGroupBox("Linked inset · digital crop of this source")
@@ -1057,6 +1057,9 @@ class MainWindow(QMainWindow):
             elif kind == "inset-roi":
                 p.inset.roi = value
             self.commit()
+            if kind in ("crop-rect", "crop-polygon"):
+                self.tool.setCurrentText("Edit crop")
+                self.notify("Crop ready: drag inside to move; drag handles to resize. Click Draw crop to draw a new selection.")
             if kind == "endpoints":
                 self.known_length.setText(draft_length)
                 self.square.setChecked(draft_square)

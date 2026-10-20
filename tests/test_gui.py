@@ -104,6 +104,157 @@ def calibrate_manual(window):
     settled(window)
 
 
+def crop_mouse(canvas, kind, point, button=Qt.MouseButton.NoButton, buttons=Qt.MouseButton.NoButton):
+    """Send real viewport events, including release-only drags and offscreen bounds."""
+    from PySide6.QtGui import QMouseEvent
+    pos = canvas.mapFromScene(QPointF(*point))
+    event = QMouseEvent(kind, QPointF(pos), QPointF(canvas.viewport().mapToGlobal(pos)),
+                       button, buttons, Qt.KeyboardModifier.NoModifier)
+    QApplication.sendEvent(canvas.viewport(), event)
+
+
+def quick_crop_drag(canvas, start, end):
+    from PySide6.QtCore import QEvent
+    crop_mouse(canvas, QEvent.Type.MouseButtonPress, start, Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton)
+    crop_mouse(canvas, QEvent.Type.MouseButtonRelease, end, Qt.MouseButton.LeftButton)
+
+
+@pytest.mark.parametrize("shape", ["rectangle", "square", "circle", "ellipse", "polygon", "freehand"])
+def test_draw_crop_then_drag_without_switching_tools(window, examples, tmp_path, shape):
+    from PySide6.QtCore import QEvent
+    from microscale.rendering import export_file
+    open_clean(window, examples)
+    calibrate_manual(window)
+    window.crop_kind.setCurrentText(shape)
+    window.draw_crop()
+    canvas = window.canvas
+    canvas.resetTransform()
+    canvas.scale(.75, .75)
+    if shape == "polygon":
+        for point in ([100, 100], [500, 100], [500, 400], [100, 400]):
+            click(canvas, point)
+        QTest.keyClick(canvas, Qt.Key.Key_Return)
+    elif shape == "freehand":
+        crop_mouse(canvas, QEvent.Type.MouseButtonPress, [100, 100], Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton)
+        for point in ([500, 100], [500, 400], [100, 400], [100, 100]):
+            crop_mouse(canvas, QEvent.Type.MouseMove, point, buttons=Qt.MouseButton.LeftButton)
+        crop_mouse(canvas, QEvent.Type.MouseButtonRelease, [100, 100], Qt.MouseButton.LeftButton)
+    else:
+        drag(canvas, [100, 100], [500, 400])
+    settled(window)
+    assert window.tool.currentText() == canvas.mode == "Edit crop"
+    original = deepcopy(window.document.project.crop)
+    crop_mouse(canvas, QEvent.Type.MouseMove, [300, 250])
+    assert canvas.viewport().cursor().shape() == Qt.CursorShape.OpenHandCursor
+    drag(canvas, [300, 250], [360, 290])
+    settled(window)
+    moved = deepcopy(window.document.project.crop)
+    assert moved.kind == shape
+    assert moved.rect == pytest.approx([original.rect[0] + 60, original.rect[1] + 40, *original.rect[2:]], abs=2)
+    if original.points:
+        np.testing.assert_allclose(moved.points, np.asarray(original.points) + [60, 40], atol=2)
+    assert window.document.project.calibration.status == "Confirmed"
+    window.undo(-1)
+    settled(window)
+    assert window.document.project.crop == original
+    window.undo(1)
+    settled(window)
+    assert window.document.project.crop == moved
+    window.save_to(str(tmp_path / "moved.json"))
+    settled(window)
+    assert load_project(tmp_path / "moved.json").crop == moved
+    if shape == "rectangle":
+        import math
+        import tifffile
+        doc = window.document
+        output = export_file(tmp_path / "moved.tif", doc.source.pixels, doc.rgba, doc.project, "data-tiff")
+        x, y, w, h = moved.rect
+        np.testing.assert_array_equal(tifffile.imread(output[0]),
+                                      doc.source.pixels[math.floor(y):math.ceil(y+h), math.floor(x):math.ceil(x+w)])
+    # Deliberately start a new crop inside the previous one.
+    window.crop_kind.setCurrentText("rectangle")
+    window.draw_crop()
+    quick_crop_drag(canvas, [200, 200], [350, 300])
+    settled(window)
+    assert window.document.project.crop.rect == pytest.approx([200, 200, 150, 100], abs=2)
+    assert canvas.mode == "Edit crop"
+
+
+@pytest.mark.parametrize("shape,aspect,ratio", [("rectangle", "Free", None), ("rectangle", "4:3", 4/3), ("square", "Free", 1)])
+def test_crop_edge_resize_keeps_opposite_edge_ratio_and_bounds(window, examples, shape, aspect, ratio):
+    from PySide6.QtCore import QEvent
+    open_clean(window, examples)
+    window.crop_kind.setCurrentText(shape)
+    window.ratio.setCurrentText(aspect)
+    window.draw_crop()
+    quick_crop_drag(window.canvas, [200, 200], [600, 500])
+    settled(window)
+    for edge in (1, 2, 3, 0):
+        x, y, w, h = window.document.project.crop.rect
+        start = window.canvas.edge_handles(window.document.project.crop)[edge]
+        end = [start[0] + (40 if edge == 1 else -40 if edge == 3 else 0),
+               start[1] + (40 if edge == 2 else -40 if edge == 0 else 0)]
+        crop_mouse(window.canvas, QEvent.Type.MouseMove, start)
+        assert window.canvas.viewport().cursor().shape() == (Qt.CursorShape.SizeVerCursor if edge % 2 == 0 else Qt.CursorShape.SizeHorCursor)
+        quick_crop_drag(window.canvas, start, end)
+        settled(window)
+        nx, ny, nw, nh = window.document.project.crop.rect
+        assert [ny+nh, nx, ny, nx+nw][edge] == pytest.approx([y+h, x, y, x+w][edge], abs=2)
+        assert (nw if edge % 2 else nh) > (w if edge % 2 else h) + 35
+        if ratio:
+            assert nw/nh == pytest.approx(ratio)
+        else:
+            assert (nh if edge % 2 else nw) == pytest.approx(h if edge % 2 else w)
+    start = window.canvas.edge_handles(window.document.project.crop)[1]
+    quick_crop_drag(window.canvas, start, [3000, start[1]])
+    settled(window)
+    x, y, w, h = window.document.project.crop.rect
+    assert x >= 0 and y >= 0 and x+w <= 1024.001 and y+h <= 1024.001
+    if ratio:
+        assert w/h == pytest.approx(ratio)
+
+
+def test_fast_crop_release_and_movement_bounds(window, examples):
+    open_clean(window, examples)
+    window.draw_crop()
+    quick_crop_drag(window.canvas, [100, 100], [500, 400])
+    settled(window)
+    original = deepcopy(window.document.project.crop.rect)
+    assert original == pytest.approx([100, 100, 400, 300], abs=2)
+    quick_crop_drag(window.canvas, [300, 250], [3000, 3000])
+    settled(window)
+    x, y, w, h = window.document.project.crop.rect
+    assert [w, h] == original[2:]
+    assert x+w == pytest.approx(1024) and y+h == pytest.approx(1024)
+    quick_crop_drag(window.canvas, [x+w/2, y+h/2], [-200, -200])
+    settled(window)
+    assert window.document.project.crop.rect[:2] == pytest.approx([0, 0])
+
+
+def test_crop_escape_and_outside_drag_do_not_replace_selection(window, examples):
+    from PySide6.QtCore import QEvent
+    open_clean(window, examples)
+    window.draw_crop()
+    quick_crop_drag(window.canvas, [200, 200], [600, 500])
+    settled(window)
+    original = deepcopy(window.document.project.crop)
+    crop_mouse(window.canvas, QEvent.Type.MouseButtonPress, [400, 300], Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton)
+    crop_mouse(window.canvas, QEvent.Type.MouseMove, [450, 350], buttons=Qt.MouseButton.LeftButton)
+    assert window.canvas.viewport().cursor().shape() == Qt.CursorShape.ClosedHandCursor
+    QTest.keyClick(window.canvas, Qt.Key.Key_Escape)
+    crop_mouse(window.canvas, QEvent.Type.MouseButtonRelease, [450, 350], Qt.MouseButton.LeftButton)
+    settled(window)
+    assert window.document.project.crop == original
+    quick_crop_drag(window.canvas, [50, 50], [100, 100])
+    settled(window)
+    assert window.document.project.crop == original
+    window.draw_crop()
+    quick_crop_drag(window.canvas, [300, 300], [300, 300])
+    settled(window)
+    assert window.canvas.mode == "Draw crop"
+    assert window.document.project.crop == original
+
+
 def test_gui_workflow_a_mouse_crops_history_measure_and_protect(window, examples, tmp_path):
     open_clean(window, examples)
     assert window.document.project.calibration.status == "Uncalibrated"

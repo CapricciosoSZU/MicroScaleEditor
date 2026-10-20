@@ -141,7 +141,10 @@ class EditorCanvas(ImageView):
         self.draft = None
         self.drag_target = None
         self.endpoint_pointer = None
+        self.selected_vertex = None
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag if mode == "Pan" else QGraphicsView.DragMode.NoDrag)
+        if mode != "Pan":
+            self.viewport().setCursor(Qt.CursorShape.CrossCursor if mode in ("Draw crop", "Crop polygon", "Crop freehand") else Qt.CursorShape.ArrowCursor)
         self.viewport().update()
 
     def source_position(self, event):
@@ -160,6 +163,64 @@ class EditorCanvas(ImageView):
             return crop.points
         x, y, w, h = crop.rect
         return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+
+    def edge_handles(self, crop):
+        if crop.kind in ("polygon", "freehand"):
+            return []
+        x, y, w, h = crop.rect
+        return [[x + w / 2, y], [x + w, y + h / 2], [x + w / 2, y + h], [x, y + h / 2]]
+
+    def crop_hit(self, crop, point):
+        tolerance = 9 / self.transform().m11()
+        vertices = self.handles(crop)
+        for i, vertex in enumerate(vertices):
+            if math.dist(point, vertex) < tolerance:
+                return ("vertex" if crop.kind in ("polygon", "freehand") else "corner", i)
+        for i, midpoint in enumerate(self.edge_handles(crop)):
+            gap = (math.dist(point, midpoint) if crop.kind in ("circle", "ellipse")
+                   else point_segment_distance(point, vertices[i], vertices[(i + 1) % 4]))
+            if gap < tolerance:
+                return "edge", i
+        if crop_path(crop).contains(QPointF(*point)):
+            return "move", deepcopy(crop)
+        return None
+
+    def update_crop_cursor(self, point):
+        if self.mode not in ("Edit crop", "Edit inset ROI") or not self.project:
+            return
+        crop = self.project.crop if self.mode == "Edit crop" else self.project.inset.roi
+        target = self.drag_target or self.crop_hit(crop, point)
+        cursor = Qt.CursorShape.ArrowCursor
+        if target:
+            kind, value = target
+            if kind == "move":
+                cursor = Qt.CursorShape.ClosedHandCursor if self.start is not None else Qt.CursorShape.OpenHandCursor
+            elif kind == "corner":
+                cursor = Qt.CursorShape.SizeFDiagCursor if value % 2 == 0 else Qt.CursorShape.SizeBDiagCursor
+            elif kind == "edge":
+                cursor = Qt.CursorShape.SizeVerCursor if value % 2 == 0 else Qt.CursorShape.SizeHorCursor
+            elif kind == "vertex":
+                cursor = Qt.CursorShape.CrossCursor
+        self.viewport().setCursor(cursor)
+
+    def update_crop_drag(self, point):
+        kind, value = self.drag_target
+        original = self.project.crop if self.mode == "Edit crop" else self.project.inset.roi
+        ratio = 1. if self.draft.kind in ("square", "circle") else self.ratio if self.mode == "Edit crop" else (1. if self.project.inset.circular else None)
+        if kind == "vertex":
+            self.draft.points[value] = point
+        elif kind == "corner":
+            opposite = self.handles(original)[(value + 2) % 4]
+            self.draft.rect = constrain_rect(normalized_rect(opposite, point, ratio), self.project.source_shape)
+        elif kind == "edge":
+            self.draft.rect = resize_crop_edge(original.rect, value, point, ratio, self.project.source_shape)
+        elif kind == "move":
+            dx, dy = point[0] - self.start[0], point[1] - self.start[1]
+            vertices = self.handles(value)
+            dx = min(max(dx, -min(p[0] for p in vertices)), self.project.source_shape[1] - max(p[0] for p in vertices))
+            dy = min(max(dy, -min(p[1] for p in vertices)), self.project.source_shape[0] - max(p[1] for p in vertices))
+            self.draft.rect = [value.rect[0] + dx, value.rect[1] + dy, *value.rect[2:]]
+            self.draft.points = [[p[0] + dx, p[1] + dy] for p in value.points]
 
     def mousePressEvent(self, event):
         if not self.project or self.mode == "Pan":
@@ -192,13 +253,10 @@ class EditorCanvas(ImageView):
                 self.selected_vertex = index + 1
                 self.drag_target = ("vertex", index + 1)
             else:
-                for i, vertex in enumerate(vertices):
-                    if math.dist(point, vertex) < tolerance:
-                        self.drag_target = ("vertex" if crop.kind in ("polygon", "freehand") else "corner", i)
-                        self.selected_vertex = i
-                        break
-                if not self.drag_target and crop_path(crop).contains(QPointF(*point)):
-                    self.drag_target = ("move", deepcopy(crop))
+                self.drag_target = self.crop_hit(crop, point)
+                if self.drag_target and self.drag_target[0] == "vertex":
+                    self.selected_vertex = self.drag_target[1]
+            self.update_crop_cursor(point)
         elif self.mode == "Move scale" and self.composition.scale_rect:
             self.drag_target = ("scale", self.composition.scale_rect[:2])
         elif self.mode == "Move inset" and self.composition.inset_rect:
@@ -233,28 +291,19 @@ class EditorCanvas(ImageView):
         if not self.project or self.mode == "Pan":
             return super().mouseMoveEvent(event)
         if self.start is None:
+            self.update_crop_cursor(self.source_position(event))
             return
         point = self.source_position(event)
         if self.drag_target:
             kind, value = self.drag_target
-            if kind == "vertex":
-                self.draft.points[value] = point
-            elif kind == "corner":
-                opposite = self.handles(self.project.crop if self.mode == "Edit crop" else self.project.inset.roi)[(value + 2) % 4]
-                ratio = 1. if self.draft.kind in ("square", "circle") else self.ratio if self.mode == "Edit crop" else (1. if self.project.inset.circular else None)
-                self.draft.rect = normalized_rect(opposite, point, ratio)
-                self.draft.rect = constrain_rect(self.draft.rect, self.project.source_shape)
-            elif kind == "move":
-                dx, dy = point[0] - self.start[0], point[1] - self.start[1]
-                vertices = self.handles(value)
-                dx = min(max(dx, -min(p[0] for p in vertices)), self.project.source_shape[1] - max(p[0] for p in vertices))
-                dy = min(max(dy, -min(p[1] for p in vertices)), self.project.source_shape[0] - max(p[1] for p in vertices))
-                self.draft.rect = [value.rect[0] + dx, value.rect[1] + dy, *value.rect[2:]]
-                self.draft.points = [[p[0] + dx, p[1] + dy] for p in value.points]
+            if kind in ("vertex", "corner", "edge", "move"):
+                self.update_crop_drag(point)
             elif kind == "endpoint":
                 self.update_endpoint(point, event.modifiers())
             else:
                 self.draft = point
+        elif self.mode in ("Edit crop", "Edit inset ROI"):
+            return
         elif self.mode in ("Mask brush", "Mask erase", "Crop freehand"):
             if math.dist(point, self.points[-1]) > max(.8, 2 / self.transform().m11()):
                 self.points.append(point)
@@ -270,12 +319,17 @@ class EditorCanvas(ImageView):
             return
         if self.mode == "Pan":
             return super().mouseReleaseEvent(event)
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
         if self.start is None or not self.project:
             return
         point = self.source_position(event)
+        if self.mode == "Draw crop" and not self.drag_target:
+            self.draft = constrain_rect(normalized_rect(self.start, point, self.ratio), self.project.source_shape)
         if self.drag_target:
             kind, value = self.drag_target
-            if kind in ("move", "corner", "vertex"):
+            if kind in ("move", "corner", "edge", "vertex"):
+                self.update_crop_drag(point)
                 if self.draft.kind not in ("polygon", "freehand") or polygon_valid(self.draft.points):
                     self.edited.emit("crop" if self.mode == "Edit crop" else "inset-roi", self.draft)
                 else:
@@ -319,6 +373,7 @@ class EditorCanvas(ImageView):
         self.endpoint_pointer = None
         if self.mode not in ("Crop polygon", "Mask polygon", "Protect polygon"):
             self.points = []
+        self.update_crop_cursor(point)
         self.viewport().update()
 
     def update_endpoint(self, point, modifiers):
@@ -364,6 +419,7 @@ class EditorCanvas(ImageView):
         elif event.key() == Qt.Key.Key_Escape:
             self.points, self.start, self.draft = [], None, None
             self.drag_target, self.endpoint_pointer = None, None
+            self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
             self.viewport().update()
         elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace) and self.project and self.selected_vertex is not None and self.project.crop.kind in ("polygon", "freehand"):
             crop = deepcopy(self.project.crop)
@@ -404,6 +460,8 @@ class EditorCanvas(ImageView):
             painter.setBrush(QColor("#45d4c5"))
             for point in self.handles(selected):
                 painter.drawEllipse(QPointF(*point), radius, radius)
+            for point in self.edge_handles(selected):
+                painter.drawRect(QRectF(point[0] - radius, point[1] - radius, 2 * radius, 2 * radius))
             painter.setBrush(Qt.BrushStyle.NoBrush)
         if self.mode == "Endpoints":
             pts = self.draft if self.drag_target and self.drag_target[0] == "endpoint" else self.project.calibration.endpoints
@@ -468,3 +526,26 @@ def point_segment_distance(p, a, b):
     v = b - a
     t = np.clip(np.dot(p - a, v) / max(1e-12, np.dot(v, v)), 0, 1)
     return np.linalg.norm(p - a - t * v)
+
+
+def resize_crop_edge(rect, edge, point, ratio, shape):
+    """Anchor the opposite edge; locked ratios expand around the other axis center."""
+    x, y, w, h = rect
+    cx, cy = x + w / 2, y + h / 2
+    if edge in (1, 3):
+        fixed = x if edge == 1 else x + w
+        width = max(1., point[0] - fixed if edge == 1 else fixed - point[0])
+        maximum = shape[1] - fixed if edge == 1 else fixed
+        if ratio:
+            maximum = min(maximum, 2 * min(cy, shape[0] - cy) * ratio)
+        width = min(width, maximum)
+        height = width / ratio if ratio else h
+        return [fixed if edge == 1 else fixed - width, cy - height / 2, width, height]
+    fixed = y if edge == 2 else y + h
+    height = max(1., point[1] - fixed if edge == 2 else fixed - point[1])
+    maximum = shape[0] - fixed if edge == 2 else fixed
+    if ratio:
+        maximum = min(maximum, 2 * min(cx, shape[1] - cx) / ratio)
+    height = min(height, maximum)
+    width = height * ratio if ratio else w
+    return [cx - width / 2, fixed if edge == 2 else fixed - height, width, height]

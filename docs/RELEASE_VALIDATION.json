@@ -1,8 +1,8 @@
 {
-  "version": "0.2.4",
+  "version": "0.2.5",
   "executable": "MicroScaleEditor.exe",
-  "sha256": "4d04170ea30d2a50123f00cd05c0a8de0c8b687deb85649cd02807db843f5040",
-  "size_bytes": 154246461,
+  "sha256": "0d514ea2b47210473215c5883b2be320d9559c995e79e5db5f912ecdf25e2154",
+  "size_bytes": 154252351,
   "status": "passed",
   "frozen": true,
   "synthetic_inputs_only": false,
@@ -37,6 +37,8 @@
     "Bundled LZW float32 1-channel exact decode",
     "2x annotated uint16 source-format export retains sample precision",
     "2x annotated float32 source-format export retains sample precision",
+    "Drawing immediately enables crop movement",
+    "Crop drag and edge resize preserve source calibration",
     "Cropping retains confirmed calibration and scale",
     "Quarter-turn GUI preview swaps dimensions",
     "Custom-angle horizontal bar fits rotated crop",
@@ -46,7 +48,7 @@
     "GUI resolution preset doubles image and calibrated bar",
     "All supplied local images passed"
   ],
-  "check_elapsed_seconds": 150.718,
+  "check_elapsed_seconds": 190.959,
   "private_images": {
     "count": 59,
     "passed": 59,

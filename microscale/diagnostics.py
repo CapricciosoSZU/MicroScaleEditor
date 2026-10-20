@@ -197,6 +197,27 @@ def run_self_test(app, output_dir, test_images=None):
             result = read_source(outputs[0]).pixels
             expected, _, _ = data_crop(native.pixels, recipe)
             check(f"2x annotated {np.dtype(dtype)} source-format export retains sample precision", result.dtype == dtype and result.shape == (240, 360) and np.array_equal(result[:100], expected[:100]) and np.unique(result[:100]).size > 256 and not np.array_equal(result, expected))
+        def crop_drag(start_point, end_point):
+            for kind, point, button, buttons in (
+                (QEvent.Type.MouseButtonPress, start_point, Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton),
+                (QEvent.Type.MouseButtonRelease, end_point, Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton),
+            ):
+                pos = canvas.mapFromScene(QPointF(*point))
+                app.sendEvent(canvas.viewport(), QMouseEvent(kind, QPointF(pos), QPointF(canvas.viewport().mapToGlobal(pos)), button, buttons, Qt.KeyboardModifier.NoModifier))
+            settle()
+        window.crop_kind.setCurrentText("rectangle")
+        window.ratio.setCurrentText("Free")
+        window.draw_crop()
+        crop_drag([100, 100], [700, 600])
+        drawn = p.crop.rect[:]
+        check("Drawing immediately enables crop movement", window.tool.currentText() == canvas.mode == "Edit crop" and np.allclose(drawn, [100, 100, 600, 500], atol=3))
+        crop_drag([300, 300], [360, 340])
+        moved = p.crop.rect[:]
+        crop_drag([moved[0] + moved[2], moved[1] + moved[3]/2], [moved[0] + moved[2] + 40, moved[1] + moved[3]/2])
+        check("Crop drag and edge resize preserve source calibration", np.allclose(moved, [drawn[0]+60, drawn[1]+40, *drawn[2:]], atol=3) and abs(p.crop.rect[2] - moved[2] - 40) < 3 and p.calibration.status == "Confirmed")
+        window.properties.setCurrentIndex(1)
+        app.processEvents()
+        window.grab().save(str(output_dir / "crop-edit-handles.png"))
         window.canvas_edit("crop-rect", ["rectangle", [100, 100, 700, 600]])
         settle()
         check("Cropping retains confirmed calibration and scale", p.calibration.status == "Confirmed" and window.composition.scale_length_px == 25)
